@@ -23,10 +23,11 @@
  ****************************************************************************/
 
 #include "AppDelegate.h"
-#include "HelloWorldScene.h"
+#include "Core.h"
+#include "GameMenu.h"
 
 // #define USE_AUDIO_ENGINE 1
-// #define USE_SIMPLE_AUDIO_ENGINE 1
+#define USE_SIMPLE_AUDIO_ENGINE 1
 
 #if USE_AUDIO_ENGINE && USE_SIMPLE_AUDIO_ENGINE
 #error "Don't use AudioEngine and SimpleAudioEngine at the same time. Please just select one in your game!"
@@ -41,8 +42,9 @@ using namespace CocosDenshion;
 #endif
 
 USING_NS_CC;
-
-static cocos2d::Size designResolutionSize = cocos2d::Size(480, 320);
+/***All of your game’s coordinates are based on design resolution, no matter what the size of your device screen.
+If the UI layout of your game is the same on all resolutions, you only need a single set of coordinates.*/
+static cocos2d::Size designResolutionSize = cocos2d::Size(1024, 768);
 static cocos2d::Size smallResolutionSize = cocos2d::Size(480, 320);
 static cocos2d::Size mediumResolutionSize = cocos2d::Size(1024, 768);
 static cocos2d::Size largeResolutionSize = cocos2d::Size(2048, 1536);
@@ -51,8 +53,9 @@ AppDelegate::AppDelegate()
 {
 }
 
+//*exiting AUDIO_ENGINE in proper way
 AppDelegate::~AppDelegate() 
-{
+{ 
 #if USE_AUDIO_ENGINE
     AudioEngine::end();
 #elif USE_SIMPLE_AUDIO_ENGINE
@@ -117,15 +120,21 @@ bool AppDelegate::applicationDidFinishLaunching() {
 
     register_all_packages();
 
+    // setting resources' directory
+    FileUtils::getInstance()->setDefaultResourceRootPath("../Resources");
+
+    //Init Core
+    Core::sharedCore();
+
     // create a scene. it's an autorelease object
-    auto scene = HelloWorld::createScene();
+    auto scene = GameMenu::createScene();
 
     // run
     director->runWithScene(scene);
 
     return true;
 }
-
+                //  P  A  U  S  E
 // This function will be called when the app is inactive. Note, when receiving a phone call it is invoked.
 void AppDelegate::applicationDidEnterBackground() {
     Director::getInstance()->stopAnimation();
@@ -138,6 +147,7 @@ void AppDelegate::applicationDidEnterBackground() {
 #endif
 }
 
+                //  R  E  S  U  M  E
 // this function will be called when the app is active again
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();

@@ -30,6 +30,18 @@
     <ClCompile Include="..\Classes\GameMenu.cpp">
       <Filter>Cpp</Filter>
     </ClCompile>
+    <ClCompile Include="..\Classes\NewGameLayer.cpp">
+      <Filter>Cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Classes\Core.cpp">
+      <Filter>Cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Classes\Figure.cpp">
+      <Filter>Cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Classes\Units.cpp">
+      <Filter>Cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -42,6 +54,21 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\Classes\GameMenu.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\NewGameLayer.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\Core.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\Specification.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\Figure.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\Units.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
