@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cocos2d.h"
+#include "Core.h"
 #include "NewGameLayer.h"
 
 
@@ -8,7 +9,7 @@
 class GameMenu : public cocos2d::Layer
 {
 private:
-
+	Core* _core = Core::sharedCore();
 public:
 	static cocos2d::Scene* createScene();
 

@@ -225,6 +225,38 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
+            <key type="filename">Images/BK_ACT_ForTurns.png</key>
+            <key type="filename">Images/WK_ACT_ForTurns.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>25,39,50,78</rect>
+                <key>scale9Paddings</key>
+                <rect>25,39,50,78</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">Images/BK_PAS_ForTurns.png</key>
+            <key type="filename">Images/WK_PAS_ForTurns.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>33,51,65,101</rect>
+                <key>scale9Paddings</key>
+                <rect>33,51,65,101</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
             <key type="filename">Images/CustomGameIcon.png</key>
             <key type="filename">Images/CustomGameIcon2.png</key>
             <key type="filename">Images/FloppyDiskIcon.png</key>
@@ -243,6 +275,8 @@
             <key type="filename">Images/SaveGameIcon2.png</key>
             <key type="filename">Images/SettingsIcon.png</key>
             <key type="filename">Images/SettingsIcon2.png</key>
+            <key type="filename">Images/YesIcon.png</key>
+            <key type="filename">Images/YesIcon2.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0.5,0.5</point_f>
@@ -254,6 +288,54 @@
                 <rect>20,20,40,40</rect>
                 <key>scale9Paddings</key>
                 <rect>20,20,40,40</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">Images/GoldenBishop.png</key>
+            <key type="filename">Images/GoldenHorse.png</key>
+            <key type="filename">Images/GoldenQueen.png</key>
+            <key type="filename">Images/GoldenRook.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>75,100,150,200</rect>
+                <key>scale9Paddings</key>
+                <rect>75,100,150,200</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">Images/ScrollView.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>73,98,145,195</rect>
+                <key>scale9Paddings</key>
+                <rect>73,98,145,195</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">Images/SettingsBox.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>125,88,250,175</rect>
+                <key>scale9Paddings</key>
+                <rect>125,88,250,175</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>

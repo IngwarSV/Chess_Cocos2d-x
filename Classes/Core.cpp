@@ -1,19 +1,13 @@
 #include "Core.h"
 
 using namespace cocos2d;
+using namespace std::chrono;
 
 static bool s_firstRun = true;
 static Core s_sharedCore;
 
 void Core::initialSetup()
 {
-	//Setting board with nullptrs
-	for (int i = 0; i < BOARD_SIZE; ++i) {
-		for (int j = 0; j < BOARD_SIZE; ++j) {
-			_board[i][j] = nullptr;
-		}
-	}
-
 	// Creating armies with figures 
 
 	//// White Army
@@ -69,16 +63,27 @@ void Core::initialSetup()
 	_enemyArmy = &_blackArmy;
 	_activeKing = _WKing;
 
+
+
+	_figureToMove = nullptr;
 	// for "en passant" actions 
 	_enPassantFigure = nullptr; // pawn that just made two-squares move
-	_firstEnPassantPoint = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
+	//_firstEnPassantPoint = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
+
+	//// for "promotion" actions 
+	_figureToPromote = nullptr;
+	//_promotedFigPreviousLocation = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
+	_tempLocation = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
 	_halfTurn = 1;
 	_CHECK = false;
 	_gameOver = false;
-	//_moveCompleted = false;
 
-	//_command = L"\n";
-	//_logMessage = NewGameString;
+	_turnDuration = time(NULL);
+	_p1GameDuration = 0.0;
+	_p2GameDuration = 0.0;
+	
+
+	_logMessage = NewGameString;
 }
 
 
@@ -89,11 +94,16 @@ bool Core::init() {
 		_board[i] = new Figure * [BOARD_SIZE];
 	}
 
+	//Setting board with nullptrs
+	for (int i = 0; i < BOARD_SIZE; ++i) {
+		for (int j = 0; j < BOARD_SIZE; ++j) {
+			_board[i][j] = nullptr;
+		}
+	}
+
 	auto spritecache = SpriteFrameCache::getInstance();
 
 	spritecache->addSpriteFramesWithFile("GameImages.plist");
-
-	initialSetup();
 
 	return true;
 }
@@ -110,11 +120,20 @@ Core* Core::sharedCore()
 
 
 
-
-
-
-void Core::processEvent(Location newLocation)
+bool Core::processEvent(Location newLocation)
 {
+	// ending promotion action (if use shared ptrs - it is possible to draw pawn till now)
+	if (_figureToPromote) {
+		_figureToMove = _figureToPromote;
+		_figureToPromote = nullptr;
+
+		// deleting data for En passant
+		_enPassantFigure = nullptr;
+
+		return endTurn(_tempLocation, _figureToMove->getLocation());;
+	}
+
+	//chosing figureToMove
 	Figure* newFigureToMove = _board[newLocation.x][newLocation.y];
 
 	if (_currentArmy->contains(newFigureToMove)) {
@@ -125,27 +144,32 @@ void Core::processEvent(Location newLocation)
 		_figureToMove = newFigureToMove;
 		_figureToMove->setActiveState();
 
-		return;
+		return false;
 	}
 
 	if (!_figureToMove) {
-		return;
+		return false;
 	}
 
 	Location currentLocation = _figureToMove->getLocation();
+
 
 	//castling checking, execution if true
 	if (castling(_figureToMove, currentLocation, newLocation)) {
 		// rook movement
 		Location rookPosition;
 		Location rookNewPosition;
+		std::string notation;
+
 		if (newLocation.y > currentLocation.y) {
 			rookPosition = Location{ currentLocation.x, BOARD_SIZE - 1 };
 			rookNewPosition = Location{ currentLocation.x, newLocation.y - 1 };
+			notation = CastlingShort;
 		}
 		else {
 			rookPosition = Location{ currentLocation.x, 0 };
 			rookNewPosition = Location{ currentLocation.x, newLocation.y + 1 };
+			notation = CastlingLong;
 		}
 		Figure* rook = _board[rookPosition.x][rookPosition.y];
 
@@ -157,13 +181,14 @@ void Core::processEvent(Location newLocation)
 
 		// deleting data for En passant
 		_enPassantFigure = nullptr;
-		_firstEnPassantPoint = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
-
-		//_logMessage = CastlingPerfomed + _command.substr(0, 5) + L'\n';
+		_tempLocation = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
 		
-		endTurn(_figureToMove, currentLocation, newLocation);
+		//Updating logMessage
+		_logMessage = CastlingPerfomed + notation;
 
-		return;
+		makeMove(_figureToMove, currentLocation, newLocation);
+
+		return endTurn(currentLocation, newLocation);
 	}
 
 
@@ -172,20 +197,19 @@ void Core::processEvent(Location newLocation)
 		Location secondEnPassantPoint = _enPassantFigure->getLocation();
 
 		deletingFigure(_enPassantFigure);
-		/*_board[currentLocation.x][currentLocation.y] = nullptr;
 		_board[secondEnPassantPoint.x][secondEnPassantPoint.y] = nullptr;
-		_board[newLocation.x][newLocation.y] = _figureToMove;
-		_figureToMove->setLocation(newLocation);*/
+		
 
 		// deleting data for En passant
 		_enPassantFigure = nullptr;
-		_firstEnPassantPoint = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
-
-		//_logMessage = enPassantPerformedString + _command.substr(0, 5) + L'\n';
+		_tempLocation = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
 		
-		endTurn(_figureToMove, currentLocation, newLocation);
+		//Updating logMessage
+		_logMessage = EnPassantPerformedString + getMoveString(currentLocation, newLocation);;
+		
+		makeMove(_figureToMove, currentLocation, newLocation);
 
-		return;
+		return endTurn(currentLocation, newLocation);
 	}
 
 
@@ -196,31 +220,28 @@ void Core::processEvent(Location newLocation)
 	for (auto possiblePosition : *v_possibleMoves) {
 		if (newLocation == possiblePosition) {
 			moveIsLegal = true;
-			/*_figureToMove->runAction(MoveTo::create(0.1f, Vec2(static_cast<float>(BOARD_X + newLocation.y * SQUARE_SIZE),
-				static_cast<float>(BOARD_Y + newLocation.x * SQUARE_SIZE))));
-			_figureToMove->setLocation(newLocation);
-			_figureToMove->setGlobalZOrder(BOARD_SIZE - newLocation.x);*/
+
 			break;
 		}
 	}
 
 	if (!moveIsLegal) {
-		//TODO_logMessage = ErrorMoveIsIllegal + _command.substr(0, 5) + L'\n';
+		_logMessage = ErrorMoveIsIllegal + getMoveString(currentLocation, newLocation);
 
-		return;
+		return false;
 	}
 		
 
 	// checking if figure's movement doesn't endanger the king
 	if (isKingInDanger(_figureToMove, currentLocation, newLocation)) {
-		//_logMessage = ErrorKingIsInDanger + _command.substr(0, 5) + L'\n';
-		//_moveCompleted = false;
-		return;
+		_logMessage = ErrorKingIsInDanger + getMoveString(currentLocation, newLocation);
+
+		return false;
 	}
 
 	// deleting data for En passant
 	_enPassantFigure = nullptr;
-	_firstEnPassantPoint = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
+	_tempLocation = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
 
 	//checking for new En passant data
 	if (_figureToMove->_firstMove) {
@@ -229,33 +250,41 @@ void Core::processEvent(Location newLocation)
 
 			if (delta == 2) {
 				_enPassantFigure = _figureToMove;
-				_firstEnPassantPoint = Location{ newLocation.x - 1, newLocation.y };
+				_tempLocation = Location{ newLocation.x - 1, newLocation.y };
 			}
 			else if (delta == -2) {
 				_enPassantFigure = _figureToMove;
-				_firstEnPassantPoint = Location{ newLocation.x + 1, newLocation.y };
+				_tempLocation = Location{ newLocation.x + 1, newLocation.y };
 			}
 		}
 	}
 
 	// Removing enemy's figure (if needed) and moving figure on new position
 	Figure* enemyFigure = _board[newLocation.x][newLocation.y];
-
 	if (enemyFigure) {
 		deletingFigure(enemyFigure);
 	}
 
+	//Updating logMessage
+	_logMessage = PreviousMoveString + getMoveString(currentLocation, newLocation);
 	
-	//_logMessage = PreviousMoveString + _command.substr(0, 5) + L'\n';
 
-	// checking for promotion
+	// Checking for promotion
 	if (_figureToMove->getType() == Type::PAWN && (newLocation.x == 0 || newLocation.x == BOARD_SIZE - 1)) {
-		promotion(_figureToMove, newLocation);
+		// Starting promotion action
+		arrangePromotion(_figureToMove);
+		_tempLocation = currentLocation;
+		_figureToPromote = _figureToMove;
+		
+		makeMove(_figureToMove, currentLocation, newLocation);
+		
+		return false;
 	}
 
-	endTurn(_figureToMove, currentLocation, newLocation);
+	// Ending move
+	makeMove(_figureToMove, currentLocation, newLocation);
 
-	return;
+	return endTurn(currentLocation, newLocation);
 }
 
 
@@ -306,7 +335,7 @@ bool Core::enPassant(Figure* figureToMove, Location currentLocation, Location ne
 	bool moveIsPossible = false;
 
 	if (figureToMove->getType() == Type::PAWN && _enPassantFigure) {
-		if (newLocation == _firstEnPassantPoint) {
+		if (newLocation == _tempLocation) {
 			// location of the pawn, that just made two-squares move
 			Location secondEnPassantPoint = _enPassantFigure->getLocation();
 			int delta = currentLocation.y - secondEnPassantPoint.y;
@@ -363,69 +392,144 @@ bool Core::isKingInDanger(Figure* figureToMove, Location currentLocation, Locati
 	return inDanger;
 }
 
-void Core::promotion(Figure* figureToMove, Location newPosition)
+void Core::arrangePromotion(Figure* figureToMove)
 {
-	////std::wstring previousMoveString = _logMessage;
-	//Color color = figureToMove->getFigureColor();
-	//std::string figureType;
-	//Figure* promotedFigure = nullptr;
-	//std::bitset<BOARD_SIZE>* bit_currentArmy;
-	//bit_currentArmy = (_halfTurn % 2) ? &_bit_whiteArmy : &_bit_blackArmy;
+	auto winSize = Director::getInstance()->getWinSize();
+	auto figureParent = figureToMove->getParent();
+	if (!figureParent) {
+		return;
+	}
+	// pausing all actions, listeners, lowering opacity of total gameLayer
+	figureParent->pause();
+	for (auto child : figureParent->getChildren()) {
+		child->setOpacity(100);
+	}
 
-	////_logMessage = ChoosePromotionString;
+	// Creating QueenSprite
+	auto queen = Sprite::createWithSpriteFrameName(GOLDEN_Q_ICON);
+	queen->setScale(0.8f);
+	queen->setAnchorPoint(Point::ANCHOR_MIDDLE_BOTTOM);
+	queen->setPosition(winSize.width / 2, winSize.height / 2 + 50);
+	figureParent->addChild(queen, 100, "Q");
+	// Creating RookSprite
+	auto rook = Sprite::createWithSpriteFrameName(GOLDEN_R_ICON);
+	rook->setScale(0.8f);
+	rook->setAnchorPoint(Point::ANCHOR_MIDDLE_LEFT);
+	rook->setPosition(winSize.width / 2 + 100, winSize.height / 2);
+	figureParent->addChild(rook, 100, "R");
+	//Creating KnightSprite
+	auto knight = Sprite::createWithSpriteFrameName(GOLDEN_H_ICON);
+	knight->setScale(0.8f);
+	knight->setAnchorPoint(Point::ANCHOR_MIDDLE_RIGHT);
+	knight->setPosition(winSize.width / 2 - 100, winSize.height / 2);
+	figureParent->addChild(knight, 100, "N");
+	// Creating BishopSprite
+	auto bishop = Sprite::createWithSpriteFrameName(GOLDEN_B_ICON);
+	bishop->setScale(0.8f);
+	bishop->setAnchorPoint(Point::ANCHOR_MIDDLE_TOP);
+	bishop->setPosition(winSize.width / 2, winSize.height / 2 - 50);
+	figureParent->addChild(bishop, 100, "B");
 
-	//while (true) {
-	//	drawGameField();
-	//	std::wcout << ENTER_COMMAND_STRING;
+	// Creating EventListeners for promotion choice
+	auto listener = EventListenerMouse::create();
 
-	//	std::getline(std::wcin, figureType);
+	listener->onMouseDown = [&](Event* event) {
+		EventMouse* mouseEvent = dynamic_cast<EventMouse*>(event);
+		auto figureParent = _activeKing->getParent();
+		
+		auto queen = figureParent->getChildByName("Q");
+		auto rook = figureParent->getChildByName("R");
+		auto knight = figureParent->getChildByName("N");
+		auto bishop = figureParent->getChildByName("B");
 
-	//	if (figureType[0] == static_cast<wchar_t>(Type::QUEEN)) {
-	//		promotedFigure = new F_Queen(color, newPosition);
+		bool promotionIsMade = false;
+		//Checking for "Queen" choice
+		if (queen && queen->getBoundingBox().containsPoint(mouseEvent->getLocationInView())) {
+			executePromotion(_figureToPromote, Type::QUEEN);
+			promotionIsMade = true;
+		}
+		//Checking for "Rook" choice
+		else if (rook && rook->getBoundingBox().containsPoint(mouseEvent->getLocationInView())) {
+			executePromotion(_figureToPromote, Type::ROOK);
+			promotionIsMade = true;
+		}
+		//Checking for "Knight" choice
+		else if (knight && knight->getBoundingBox().containsPoint(mouseEvent->getLocationInView())) {
+			executePromotion(_figureToPromote, Type::KNIGHT);
+			promotionIsMade = true;
+		}
+		//Checking for "Bishop" choice
+		else if (bishop && bishop->getBoundingBox().containsPoint(mouseEvent->getLocationInView())) {
+			executePromotion(_figureToPromote, Type::BISHOP);
+			promotionIsMade = true;
+		}
 
-	//		(bit_currentArmy->test(bit_F_Queen1)) ?
-	//			bit_currentArmy->set(bit_F_Queen2) : bit_currentArmy->set(bit_F_Queen1);
+		if (promotionIsMade) {
+			figureParent->removeChild(figureParent->getChildByName("Q"));
+			figureParent->removeChild(figureParent->getChildByName("R"));
+			figureParent->removeChild(figureParent->getChildByName("N"));
+			figureParent->removeChild(figureParent->getChildByName("B"));
+			figureParent->resume();
+			for (auto child : figureParent->getChildren()) {
+				child->setOpacity(255);
+			}
+			figureParent->getEventDispatcher()->dispatchEvent(event);
+		}
+	};
 
-	//		break;
-	//	}
-	//	else if (figureType[0] == static_cast<wchar_t>(Type::BISHOP)) {
-	//		promotedFigure = new F_Bishop(color, newPosition);
+	figureParent->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, figureParent);
+}
 
-	//		((newPosition.x + newPosition.y) % 2) ?
-	//			bit_currentArmy->set(bit_F_Bishop1) : bit_currentArmy->set(bit_F_Bishop2);
+void Core::executePromotion(Figure* figureToMove, Type figureType)
+{
+	Color color = figureToMove->getFigureColor();
+	Location newPosition = figureToMove->getLocation();
+	Figure* promotedFigure = nullptr;
+	std::bitset<BOARD_SIZE>* bit_currentArmy;
+	bit_currentArmy = (_halfTurn % 2) ? &_bit_whiteArmy : &_bit_blackArmy;
+	_logMessage = ChoosePromotionString;
+	auto figureParent = figureToMove->getParent();
+	if (!figureParent) {
+		return;
+	}
+	
+	
+	if (figureType == Type::QUEEN) {
+		promotedFigure = new F_Queen(color, newPosition);
 
-	//		break;
-	//	}
-	//	else if (figureType[0] == static_cast<wchar_t>(Type::KNIGHT)) {
-	//		promotedFigure = new F_Knight(color, newPosition);
+		(bit_currentArmy->test(bit_F_Queen1)) ?
+			bit_currentArmy->set(bit_F_Queen2) : bit_currentArmy->set(bit_F_Queen1);
+	}
+	else if (figureType == Type::BISHOP) {
+		promotedFigure = new F_Bishop(color, newPosition);
 
-	//		(bit_currentArmy->test(bit_F_Knight1)) ?
-	//			bit_currentArmy->set(bit_F_Knight2) : bit_currentArmy->set(bit_F_Knight1);
+		((newPosition.x + newPosition.y) % 2) ?
+			bit_currentArmy->set(bit_F_Bishop1) : bit_currentArmy->set(bit_F_Bishop2);
+	}
+	else if (figureType == Type::KNIGHT) {
+		promotedFigure = new F_Knight(color, newPosition);
 
-	//		break;
-	//	}
-	//	else if (figureType[0] == static_cast<wchar_t>(Type::ROOK)) {
-	//		promotedFigure = new F_Rook(color, newPosition);
+		(bit_currentArmy->test(bit_F_Knight1)) ?
+			bit_currentArmy->set(bit_F_Knight2) : bit_currentArmy->set(bit_F_Knight1);
+	}
+	else if (figureType == Type::ROOK) {
+		promotedFigure = new F_Rook(color, newPosition);
 
-	//		(bit_currentArmy->test(bit_F_Rook1)) ?
-	//			bit_currentArmy->set(bit_F_Rook2) : bit_currentArmy->set(bit_F_Rook1);
+		(bit_currentArmy->test(bit_F_Rook1)) ?
+			bit_currentArmy->set(bit_F_Rook2) : bit_currentArmy->set(bit_F_Rook1);
+	}
 
-	//		break;
-	//	}
+	// deleting pawn
+	deletingFigure(figureToMove);
 
-	//	_logMessage = ErrorPromotionType1 + figureType[0] + ErrorPromotionType2;
-	//}
+	// setting new figure
+	_board[newPosition.x][newPosition.y] = promotedFigure;
+	_currentArmy->pushBack(promotedFigure);
+	promotedFigure->setPosition(convertCoord(newPosition));
+	figureParent->addChild(promotedFigure, BOARD_SIZE - newPosition.x);
+	_figureToPromote = promotedFigure;
 
-	//// deleting pawn
-	//_currentArmy->erase(figureToMove);
-	//delete figureToMove;
-	//_pawnQuantity -= 1;
-
-	//// setting new figure
-	//_board[newPosition.x][newPosition.y] = promotedFigure;
-	//_currentArmy->insert(promotedFigure);
-
-	//_logMessage = previousMoveString;
+	_logMessage = PromotionSuccessString;
 }
 
 bool Core::isCheck()
@@ -454,7 +558,7 @@ bool Core::isCheckmate()
 
 	for (auto possiblePosition : *v_possibleMoves) {
 		if (!isKingInDanger(_activeKing, kingLocation, possiblePosition)) {
-			//_logMessage += ErrorCheckString;
+			_logMessage += WarningCheckString;
 
 			return false;
 		}
@@ -469,7 +573,7 @@ bool Core::isCheckmate()
 
 		for (auto possiblePosition : *v_possibleMoves) {
 			if (!isKingInDanger(figure, figureLocation, possiblePosition)) {
-				//_logMessage += ErrorCheckString;
+				_logMessage += WarningCheckString;
 
 				return false;
 			}
@@ -477,8 +581,8 @@ bool Core::isCheckmate()
 
 		//// checking if enPassant can be performed to protect the king
 		if (figure->getType() == Type::PAWN && _enPassantFigure) {
-			if (enPassant(figure, figure->getLocation(), _firstEnPassantPoint)) {
-				//_logMessage += ErrorCheckString;
+			if (enPassant(figure, figure->getLocation(), _tempLocation)) {
+				_logMessage += WarningCheckString;
 
 				return false;
 			}
@@ -486,7 +590,7 @@ bool Core::isCheckmate()
 	}
 
 	// Game Over
-	//_logMessage += ErrorCheckmateString;
+	_logMessage += WarningCheckmateString;
 
 	return true;
 }
@@ -510,7 +614,7 @@ bool Core::isDraw()
 
 		// checking for enPassant move
 		if (figure->getType() == Type::PAWN && _enPassantFigure && !hasLegalMove) {
-			if (enPassant(figure, figure->getLocation(), _firstEnPassantPoint)) {
+			if (enPassant(figure, figure->getLocation(), _tempLocation)) {
 				hasLegalMove = true;
 
 				break;
@@ -562,8 +666,8 @@ void Core::deletingFigure(Figure* enemyFigure)
 	Location location = enemyFigure->getLocation();
 	std::bitset<BOARD_SIZE>* bit_enemyArmy;
 
-	bit_enemyArmy = (_halfTurn % 2) ?
-		&_bit_blackArmy : bit_enemyArmy = &_bit_whiteArmy;
+	bit_enemyArmy = (enemyFigure->getFigureColor() == Color::BLACK) ?
+		&_bit_blackArmy : &_bit_whiteArmy;
 
 	// updating bitset considering type of deleted figure
 	switch (type) {
@@ -601,7 +705,10 @@ void Core::deletingFigure(Figure* enemyFigure)
 		break;
 	}
 
-	_enemyArmy->eraseObject(enemyFigure);
+	_board[location.x][location.y] = nullptr;
+	enemyFigure->getParent()->removeChild(enemyFigure);
+	(enemyFigure->getFigureColor() == Color::BLACK) ?
+		_blackArmy.eraseObject(enemyFigure) : _whiteArmy.eraseObject(enemyFigure);
 	delete enemyFigure;
 }
 
@@ -611,22 +718,157 @@ Vec2 Core::convertCoord(Location location)
 		static_cast<float>(BOARD_Y + location.x * SQUARE_SIZE));
 }
 
-void Core::endTurn(Figure* figureToMove, Location currentLocation, Location newLocation)
+std::string Core::getMoveString(Location currentLocation, Location newLocation)
 {
+	std::string moveString;
+	moveString = static_cast<char>(currentLocation.y) + 'A';
+	moveString += static_cast<char>(currentLocation.x) + '1';
+	moveString += '-';
+	moveString += static_cast<char>(newLocation.y) + 'A';
+	moveString += static_cast<char>(newLocation.x) + '1';
+
+	return moveString;
+}
+
+void Core::clearData()
+{
+	// resetting armies' bitsets and pawn quantity
+	_bit_whiteArmy.reset();
+	_bit_blackArmy.reset();
+	_pawnQuantity = 0;
+
+	// deleting current figures
+	for (auto figure : _whiteArmy) {
+		figure->getParent()->removeChild(figure);
+		delete figure;
+	}
+	_whiteArmy.clear();
+
+	for (auto figure : _blackArmy) {
+		figure->getParent()->removeChild(figure);
+		delete figure;
+	}
+	_blackArmy.clear();
+
+	// Setting board with nullptrs
+	for (int i = 0; i < BOARD_SIZE; ++i) {
+		for (int j = 0; j < BOARD_SIZE; ++j) {
+			_board[i][j] = nullptr;
+		}
+	}
+
+	_currentArmy = nullptr;
+	_enemyArmy = nullptr;
+	_activeKing = nullptr;
+
+	_figureToMove = nullptr;
+	_enPassantFigure = nullptr;
+	_figureToPromote = nullptr;
+	_tempLocation = Location{ BOARD_SIZE, BOARD_SIZE };
+	_halfTurn = 1;
+	_CHECK = false;
+	_gameOver = false;
+
+	_turnDuration = 0;
+	_p1GameDuration = 0.0;
+	_p2GameDuration = 0.0;
+
+	_logMessage = "";
+
+
+
+
+
+}
+
+void Core::makeMove(Figure* figureToMove, Location currentLocation, Location newLocation) {
 	_board[currentLocation.x][currentLocation.y] = nullptr;
-	_board[newLocation.x][newLocation.y] = _figureToMove;
+	_board[newLocation.x][newLocation.y] = figureToMove;
 	figureToMove->setLocation(newLocation);
 	figureToMove->_firstMove = false;
 	figureToMove->runAction(MoveTo::create(0.1f, convertCoord(newLocation)));
-	figureToMove->setGlobalZOrder(BOARD_SIZE - newLocation.x);
+	figureToMove->setLocalZOrder(BOARD_SIZE - newLocation.x);
 	figureToMove->setPassiveState();
-	figureToMove = nullptr;
+	
+}
+
+bool Core::endTurn(Location currentLocation, Location newLocation)
+{
+	std::string moveString = _figureToMove->getFigureName() + getMoveString(currentLocation, newLocation);
+	_figureToMove = nullptr;
 	_halfTurn += 1;
 	_CHECK = false;
-
+	//_promotedFigPreviousLocation = Location{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
 	
-
 	// updating pointers for quick access
+	const auto tempTime = time(NULL);
+	
+	if (_halfTurn % 2) {
+		_currentArmy = &_whiteArmy;
+		_enemyArmy = &_blackArmy;
+		_activeKing = _WKing;
+		_p2GameDuration += difftime(tempTime, _turnDuration);
+	}
+	else {
+		_currentArmy = &_blackArmy;
+		_enemyArmy = &_whiteArmy;
+		_activeKing = _BKing;
+		_p2GameDuration += difftime(tempTime, _turnDuration);
+	}
+
+	// Saving moveString
+	const int duration = static_cast<int>(_p1GameDuration + _p2GameDuration);
+	if (duration / 60 < 10) {
+		moveString += "0";
+	}
+	moveString += std::to_string(duration / 60) + ':';
+	if (duration % 60 < 10) {
+		moveString += "0";
+	}
+	moveString += std::to_string(duration % 60);
+	_movesVector.push_back(moveString);
+
+	_turnDuration = tempTime;
+	
+	if (isCheck()) {
+		_CHECK = true;
+		if (isCheckmate()) {
+			_gameOver = true;
+		}
+	}
+	else if (isDraw()) {
+		_gameOver = true;
+	}
+
+	return true;
+}
+
+void Core::loadGameDataString(std::string dataString) // create new custom Game from string, for testing
+{
+	std::istringstream load(dataString);
+
+	// deleting existing game data to load saved game
+	clearData();
+
+	// loading _halfTurn
+	load >> _halfTurn;
+
+	// loading "en passant" actions 
+	//// location of the pawn, that just made two squares move
+	Location secondEnPassantPoint;
+	load >> secondEnPassantPoint.x >> secondEnPassantPoint.y;
+	//// _firstEnPassantPoint - square that was skipped by the pawn
+	load >> _tempLocation.x >> _tempLocation.y;
+
+	//parsing strings into figure's data
+	std::string col_type_loc;
+
+	while (load) {
+		load >> col_type_loc;
+		parseFigureDataString(col_type_loc);
+	}
+
+	// setting pointers for quick access
 	if (_halfTurn % 2) {
 		_currentArmy = &_whiteArmy;
 		_enemyArmy = &_blackArmy;
@@ -638,27 +880,197 @@ void Core::endTurn(Figure* figureToMove, Location currentLocation, Location newL
 		_activeKing = _BKing;
 	}
 
-	if (isCheck()) {
-		_CHECK = true;
-		if (isCheckmate()) {
-			_gameOver = true;
-		}
-	}
-	else if (isDraw()) {
-		_gameOver = true;
-	}
+	//// setting pointer to the pawn, that has just made two-squares move (or nullprt)
+	_enPassantFigure = (secondEnPassantPoint != Location{ BOARD_SIZE, BOARD_SIZE }) ?
+		_board[secondEnPassantPoint.x][secondEnPassantPoint.y] : nullptr;
+
+	_CHECK = isCheck();
 }
 
+void Core::startTurnDurationCount()
+{
+	_turnDuration = time(NULL);
+}
 
-// getters
-//Figure* Core::getFigureOnBoard(Location location) const {
-//	return _board[location.x][location.y];
-//}
+void Core::parseFigureDataString(std::string col_type_loc)
+{
+	Location location;
+	Figure* newFigure = nullptr;
+	Color color;
 
-//std::vector<Location>* Core::getPossibleMoves(Figure* figure)
-//{
-//	return figure->getPossibleMoves(_board);
-//}
+	//setting location, e.g "A8" == Location(0,0),"B3" == Location(5,1)
+	location.x = static_cast<int>(col_type_loc[3] - '1');
+	location.y = static_cast<int>(col_type_loc[2] - 'A');
+
+	if (location.x < 0 || location.y < 0 || location.x > BOARD_SIZE - 1 || location.y > BOARD_SIZE - 1) {
+		/*_logMessage = EnteringCustomString + ErrorLocCustomString +
+			col_type_loc.substr(2, 2) + L'\n';*/
+		return;
+	}
+	else if (_board[location.x][location.y]) {
+		/*_logMessage = EnteringCustomString + ErrorLocOccupiedCustomString +
+			col_type_loc.substr(2, 2) + L'\n';*/
+		return;
+	}
+
+	//setting color
+	if (col_type_loc[0] == static_cast<char>(Color::WHITE)) {
+		color = Color::WHITE;
+
+		//setting type, creating new figure, adding figure to white army and setting army's bitset
+		switch (col_type_loc[1]) {
+
+			case static_cast<char>(Type::KING) :
+				newFigure = new F_King(color, location);
+				_whiteArmy.pushBack(newFigure);
+				_WKing = newFigure;
+
+				break;
+
+				case static_cast<char>(Type::QUEEN) :
+					newFigure = new F_Queen(color, location);
+					_whiteArmy.pushBack(newFigure);
+
+					(_bit_whiteArmy.test(bit_F_Queen1)) ?
+						_bit_whiteArmy.set(bit_F_Queen2) : _bit_whiteArmy.set(bit_F_Queen1);
+
+					break;
+
+					case static_cast<char>(Type::BISHOP) :
+						newFigure = new F_Bishop(color, location);
+						_whiteArmy.pushBack(newFigure);
+
+						((location.x + location.y) % 2) ?
+							_bit_whiteArmy.set(bit_F_Bishop1) : _bit_whiteArmy.set(bit_F_Bishop2);
+
+						break;
+
+						case static_cast<char>(Type::KNIGHT) :
+							newFigure = new F_Knight(color, location);
+							_whiteArmy.pushBack(newFigure);
+
+							(_bit_whiteArmy.test(bit_F_Knight1)) ?
+								_bit_whiteArmy.set(bit_F_Knight2) : _bit_whiteArmy.set(bit_F_Knight1);
+
+							break;
+
+							case static_cast<char>(Type::ROOK) :
+								newFigure = new F_Rook(color, location);
+								_whiteArmy.pushBack(newFigure);
+
+								(_bit_whiteArmy.test(bit_F_Rook1)) ?
+									_bit_whiteArmy.set(bit_F_Rook2) : _bit_whiteArmy.set(bit_F_Rook1);
+
+								break;
+
+								case static_cast<char>(Type::PAWN) :
+									newFigure = new F_Pawn(color, location);
+									_whiteArmy.pushBack(newFigure);
+									_pawnQuantity += 1;
+
+									break;
+
+								default:
+									/*_logMessage = EnteringCustomString + ErrorTypeCustomString +
+										col_type_loc.substr(0, 2) + L'\n';*/
+
+									return;
+		}
+
+		//setting first move state
+		if (col_type_loc[4] != L'1') {
+			newFigure->_firstMove = false;
+		}
+
+		_board[location.x][location.y] = newFigure;
+
+		/*_logMessage = EnteringCustomString + FigureIsPlacedString +
+			col_type_loc.substr(0, 4) + L'\n';*/
+
+		return;
+	}
+	else if (col_type_loc[0] == static_cast<char>(Color::BLACK)) {
+		color = Color::BLACK;
+
+		//setting type, creating new figure, adding figure to black army and setting army's bitset
+		switch (col_type_loc[1]) {
+
+			case static_cast<char>(Type::KING) :
+				newFigure = new F_King(color, location);
+				_blackArmy.pushBack(newFigure);
+				_BKing = newFigure;
+
+				break;
+
+				case static_cast<char>(Type::QUEEN) :
+					newFigure = new F_Queen(color, location);
+					_blackArmy.pushBack(newFigure);
+
+					(_bit_blackArmy.test(bit_F_Queen1)) ?
+						_bit_blackArmy.set(bit_F_Queen2) : _bit_blackArmy.set(bit_F_Queen1);
+
+					break;
+
+					case static_cast<char>(Type::BISHOP) :
+						newFigure = new F_Bishop(color, location);
+						_blackArmy.pushBack(newFigure);
+
+						((location.x + location.y) % 2) ?
+							_bit_blackArmy.set(bit_F_Bishop1) : _bit_blackArmy.set(bit_F_Bishop2);
+
+						break;
+
+						case static_cast<char>(Type::KNIGHT) :
+							newFigure = new F_Knight(color, location);
+							_blackArmy.pushBack(newFigure);
+
+							(_bit_blackArmy.test(bit_F_Knight1)) ?
+								_bit_blackArmy.set(bit_F_Knight2) : _bit_blackArmy.set(bit_F_Knight1);
+
+							break;
+
+							case static_cast<char>(Type::ROOK) :
+								newFigure = new F_Rook(color, location);
+								_blackArmy.pushBack(newFigure);
+
+								(_bit_blackArmy.test(bit_F_Rook1)) ?
+									_bit_blackArmy.set(bit_F_Rook2) : _bit_blackArmy.set(bit_F_Rook1);
+
+								break;
+
+								case static_cast<char>(Type::PAWN) :
+									newFigure = new F_Pawn(color, location);
+									_blackArmy.pushBack(newFigure);
+									_pawnQuantity += 1;
+
+									break;
+
+								default:
+									/*_logMessage = EnteringCustomString + ErrorTypeCustomString +
+										col_type_loc.substr(0, 2) + L'\n';*/
+
+									break;
+		}
+
+		//setting first move state
+		if (col_type_loc[4] != L'1') {
+			newFigure->_firstMove = false;
+		}
+
+		_board[location.x][location.y] = newFigure;
+
+		/*_logMessage = EnteringCustomString + FigureIsPlacedString +
+			col_type_loc.substr(0, 4) + L'\n';*/
+
+		return;
+	}
+	else {
+		/*_logMessage = EnteringCustomString + ErrorColorCustomString +
+			col_type_loc.substr(0, 2) + L'\n';*/
+
+		return;
+	}
+}
 
 const cocos2d::Vector<Figure*>* Core::getWhiteArmy() const {
 	return &_whiteArmy;
@@ -671,4 +1083,39 @@ const cocos2d::Vector<Figure*>* Core::getBlackArmy() const {
 const cocos2d::Vector<Figure*>* Core::getCurrentArmy() const
 {
 	return _currentArmy;
+}
+
+const std::string& Core::getLogMessage() const {
+	return _logMessage;
+}
+
+const bool Core::getGameOver() const
+{
+	return _gameOver;
+}
+
+const int Core::getHalfTurn() const
+{
+	return _halfTurn;
+}
+
+const std::pair<double, double> Core::getGameDuration()
+{
+	const auto tempTime = time(NULL);
+	
+	if (_halfTurn % 2) {
+		_p1GameDuration += difftime(tempTime, _turnDuration);
+	}
+	else {
+		_p2GameDuration += difftime(tempTime, _turnDuration);
+	}
+
+	_turnDuration = tempTime;
+
+	return std::pair<double, double>(_p1GameDuration, _p2GameDuration);
+}
+
+const std::string& Core::getLastMove() const
+{
+	return _movesVector.back();
 }

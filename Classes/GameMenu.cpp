@@ -93,15 +93,13 @@ bool GameMenu::init()
 
 void GameMenu::onNewGamePvPlClick(cocos2d::Ref* sender)
 {
-	auto gameScene = Scene::create();
-	gameScene->addChild(NewGameLayer::create());
-
-	//Director::getInstance()->replaceScene(gameScene);
-	Director::getInstance()->replaceScene(TransitionCrossFade::create(1.0, gameScene));
+	_core->initialSetup();
+	Director::getInstance()->pushScene(TransitionCrossFade::create(1.0, NewGameLayer::createScene()));
 }
 
 void GameMenu::onNewGamePvPCClick(cocos2d::Ref* sender)
 {
+	//Director::getInstance()->popToSceneStackLevel(2);
 }
 
 void GameMenu::onCustomGameClick(cocos2d::Ref* sender)
