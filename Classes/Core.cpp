@@ -86,7 +86,6 @@ void Core::initialSetup()
 	_logMessage = NewGameString;
 }
 
-
 bool Core::init() {
 	// creating Board[8][8]
 	this->_board = new Figure * *[BOARD_SIZE];
@@ -103,11 +102,10 @@ bool Core::init() {
 
 	auto spritecache = SpriteFrameCache::getInstance();
 
-	spritecache->addSpriteFramesWithFile("GameImages.plist");
+	spritecache->addSpriteFramesWithFile("Images.plist", "Images.png");
 
 	return true;
 }
-
 
 Core* Core::sharedCore()
 {
@@ -118,7 +116,144 @@ Core* Core::sharedCore()
 	return &s_sharedCore;
 }
 
+void Core::saveData(std::string filename)
+{
+	std::string filenamePath = FileUtils::getInstance()->getWritablePath() +
+		SAVED_GAMES_DIR + '/' + filename;
 
+	std::ofstream save(filenamePath);
+	if (save) {
+		// saving _halfTurn
+		save << _halfTurn << ' ';
+
+		// saving gameDuration
+		save << _p1GameDuration << ' ';
+		save << _p2GameDuration << ' ';
+		
+		// saving "en passant" actions 
+		//// location of the pawn, that just made two-square move
+		Location secondEnPassantPoint{ BOARD_SIZE, BOARD_SIZE }; // setting point out of the board
+
+		if (_enPassantFigure) {
+			secondEnPassantPoint = _enPassantFigure->getLocation();
+		}
+
+		//// _tempLocation - square that was skipped by the pawn
+		save << secondEnPassantPoint.x << ' ' << secondEnPassantPoint.y << ' '
+			<< _tempLocation.x << ' ' << _tempLocation.y << ' ';
+
+		// saving movesLog
+		for (auto moveString : _movesVector) {
+			save << moveString << ' ';
+		}
+		save << '\n';
+
+		// saving figures in std::string e.g. "WKA21" - white king, location A2, first move - true;
+		for (auto figure : _whiteArmy) {
+			Location location = figure->getLocation();
+			int xCoord = location.x + 1;
+			char yCoord = static_cast<char>(location.y) + 'A';
+
+			save << figure->getFigureName() << yCoord << xCoord << figure->_firstMove << ' ';
+		}
+
+		save << '\n';
+
+		for (auto figure : _blackArmy) {
+			Location location = figure->getLocation();
+			int xCoord = location.x + 1;
+			char yCoord = static_cast<char>(location.y) + 'A';
+
+			save << figure->getFigureName() << yCoord << xCoord << figure->_firstMove << ' ';
+		}
+		save << '\n';
+
+		_logMessage = SuccessSaveGameString + filename;
+	}
+	else {
+		_logMessage = ErrorSaveGameString + filename;
+	}
+
+	save.close();
+}
+
+void Core::loadData(const std::string& gameDataString,
+	const std::string& wArmyDataString, const std::string& bArmyDataString, std::string filename)
+{
+	clearData();
+	
+	std::stringstream load;
+	load.str(gameDataString);
+	
+	// loading _halfTurn
+	load >> _halfTurn;
+		
+	// loading gameDuration
+	load >> _p1GameDuration;
+	load >> _p2GameDuration;
+		
+	// loading "en passant" actions 
+	//// location of the pawn, that just made two-squares move
+	Location secondEnPassantPoint;
+	load >> secondEnPassantPoint.x >> secondEnPassantPoint.y;
+	//// _firstEnPassantPoint - square that was skipped by the pawn
+	load >> _tempLocation.x >> _tempLocation.y;
+		
+	// loading savedMovesData
+	std::string savedMove;
+	for (int savedMoveCounter = 1; savedMoveCounter < _halfTurn;) {
+		load >> savedMove;
+		_movesVector.push_back(savedMove);
+		savedMoveCounter += 1;
+	}
+
+	//parsing strings into whiteArmy data
+	load.str("");
+	load.clear();
+	load.str(wArmyDataString);
+	std::string col_type_loc;
+	while (load) {
+		load >> col_type_loc;
+		parseFigureDataString(col_type_loc);
+	}
+
+	//parsing strings into blackArmy data
+	load.str("");
+	load.clear();
+	load.str(bArmyDataString);
+	while (load) {
+		load >> col_type_loc;
+		parseFigureDataString(col_type_loc);
+	}
+	
+	//// setting pointer to figure, that has just made two-squares move (or to nullprt)
+	_enPassantFigure = (secondEnPassantPoint != Location{ BOARD_SIZE, BOARD_SIZE }) ?
+	_board[secondEnPassantPoint.x][secondEnPassantPoint.y] : nullptr;
+
+	// updating pointers for quick access
+	if (_halfTurn % 2) {
+		_currentArmy = &_whiteArmy;
+		_enemyArmy = &_blackArmy;
+		_activeKing = _WKing;
+	}
+	else {
+		_currentArmy = &_blackArmy;
+		_enemyArmy = &_whiteArmy;
+		_activeKing = _BKing;
+	}
+
+	if (isCheck()) {
+		_CHECK = true;
+		if (isCheckmate()) {
+			_gameOver = true;
+		}
+	}
+	else if (isDraw()) {
+		_gameOver = true;
+	}
+	
+	_logMessage = LoadGameSuccessString + filename;
+}
 
 bool Core::processEvent(Location newLocation)
 {
@@ -286,7 +421,6 @@ bool Core::processEvent(Location newLocation)
 
 	return endTurn(currentLocation, newLocation);
 }
-
 
 bool Core::castling(Figure* king, Location currentLocation, Location newLocation)
 {
@@ -739,13 +873,19 @@ void Core::clearData()
 
 	// deleting current figures
 	for (auto figure : _whiteArmy) {
-		figure->getParent()->removeChild(figure);
+		auto parent = figure->getParent();
+		if (parent) {
+			parent->removeChild(figure);
+		}
 		delete figure;
 	}
 	_whiteArmy.clear();
 
 	for (auto figure : _blackArmy) {
-		figure->getParent()->removeChild(figure);
+		auto parent = figure->getParent();
+		if (parent) {
+			parent->removeChild(figure);
+		}
 		delete figure;
 	}
 	_blackArmy.clear();
@@ -757,6 +897,9 @@ void Core::clearData()
 		}
 	}
 
+	//clearing movesVector
+	_movesVector.clear();
+	
 	_currentArmy = nullptr;
 	_enemyArmy = nullptr;
 	_activeKing = nullptr;
@@ -774,11 +917,6 @@ void Core::clearData()
 	_p2GameDuration = 0.0;
 
 	_logMessage = "";
-
-
-
-
-
 }
 
 void Core::makeMove(Figure* figureToMove, Location currentLocation, Location newLocation) {
@@ -843,50 +981,6 @@ bool Core::endTurn(Location currentLocation, Location newLocation)
 	return true;
 }
 
-void Core::loadGameDataString(std::string dataString) // create new custom Game from string, for testing
-{
-	std::istringstream load(dataString);
-
-	// deleting existing game data to load saved game
-	clearData();
-
-	// loading _halfTurn
-	load >> _halfTurn;
-
-	// loading "en passant" actions 
-	//// location of the pawn, that just made two squares move
-	Location secondEnPassantPoint;
-	load >> secondEnPassantPoint.x >> secondEnPassantPoint.y;
-	//// _firstEnPassantPoint - square that was skipped by the pawn
-	load >> _tempLocation.x >> _tempLocation.y;
-
-	//parsing strings into figure's data
-	std::string col_type_loc;
-
-	while (load) {
-		load >> col_type_loc;
-		parseFigureDataString(col_type_loc);
-	}
-
-	// setting pointers for quick access
-	if (_halfTurn % 2) {
-		_currentArmy = &_whiteArmy;
-		_enemyArmy = &_blackArmy;
-		_activeKing = _WKing;
-	}
-	else {
-		_currentArmy = &_blackArmy;
-		_enemyArmy = &_whiteArmy;
-		_activeKing = _BKing;
-	}
-
-	//// setting pointer to the pawn, that has just made two-squares move (or nullprt)
-	_enPassantFigure = (secondEnPassantPoint != Location{ BOARD_SIZE, BOARD_SIZE }) ?
-		_board[secondEnPassantPoint.x][secondEnPassantPoint.y] : nullptr;
-
-	_CHECK = isCheck();
-}
-
 void Core::startTurnDurationCount()
 {
 	_turnDuration = time(NULL);
@@ -894,9 +988,14 @@ void Core::startTurnDurationCount()
 
 void Core::parseFigureDataString(std::string col_type_loc)
 {
+	if (col_type_loc.length() < 4) {
+		return;
+	}
+
 	Location location;
 	Figure* newFigure = nullptr;
-	Color color;
+	Color color = static_cast<Color>(col_type_loc[0]);
+	std::bitset<BOARD_SIZE>* bit_currentArmy;
 
 	//setting location, e.g "A8" == Location(0,0),"B3" == Location(5,1)
 	location.x = static_cast<int>(col_type_loc[3] - '1');
@@ -912,164 +1011,76 @@ void Core::parseFigureDataString(std::string col_type_loc)
 			col_type_loc.substr(2, 2) + L'\n';*/
 		return;
 	}
-
+	
 	//setting color
-	if (col_type_loc[0] == static_cast<char>(Color::WHITE)) {
-		color = Color::WHITE;
-
-		//setting type, creating new figure, adding figure to white army and setting army's bitset
-		switch (col_type_loc[1]) {
-
-			case static_cast<char>(Type::KING) :
-				newFigure = new F_King(color, location);
-				_whiteArmy.pushBack(newFigure);
-				_WKing = newFigure;
-
-				break;
-
-				case static_cast<char>(Type::QUEEN) :
-					newFigure = new F_Queen(color, location);
-					_whiteArmy.pushBack(newFigure);
-
-					(_bit_whiteArmy.test(bit_F_Queen1)) ?
-						_bit_whiteArmy.set(bit_F_Queen2) : _bit_whiteArmy.set(bit_F_Queen1);
-
-					break;
-
-					case static_cast<char>(Type::BISHOP) :
-						newFigure = new F_Bishop(color, location);
-						_whiteArmy.pushBack(newFigure);
-
-						((location.x + location.y) % 2) ?
-							_bit_whiteArmy.set(bit_F_Bishop1) : _bit_whiteArmy.set(bit_F_Bishop2);
-
-						break;
-
-						case static_cast<char>(Type::KNIGHT) :
-							newFigure = new F_Knight(color, location);
-							_whiteArmy.pushBack(newFigure);
-
-							(_bit_whiteArmy.test(bit_F_Knight1)) ?
-								_bit_whiteArmy.set(bit_F_Knight2) : _bit_whiteArmy.set(bit_F_Knight1);
-
-							break;
-
-							case static_cast<char>(Type::ROOK) :
-								newFigure = new F_Rook(color, location);
-								_whiteArmy.pushBack(newFigure);
-
-								(_bit_whiteArmy.test(bit_F_Rook1)) ?
-									_bit_whiteArmy.set(bit_F_Rook2) : _bit_whiteArmy.set(bit_F_Rook1);
-
-								break;
-
-								case static_cast<char>(Type::PAWN) :
-									newFigure = new F_Pawn(color, location);
-									_whiteArmy.pushBack(newFigure);
-									_pawnQuantity += 1;
-
-									break;
-
-								default:
-									/*_logMessage = EnteringCustomString + ErrorTypeCustomString +
-										col_type_loc.substr(0, 2) + L'\n';*/
-
-									return;
-		}
-
-		//setting first move state
-		if (col_type_loc[4] != L'1') {
-			newFigure->_firstMove = false;
-		}
-
-		_board[location.x][location.y] = newFigure;
-
-		/*_logMessage = EnteringCustomString + FigureIsPlacedString +
-			col_type_loc.substr(0, 4) + L'\n';*/
-
-		return;
+	if (color == Color::WHITE) {
+		_currentArmy = &_whiteArmy;
+		bit_currentArmy = &_bit_whiteArmy;
 	}
-	else if (col_type_loc[0] == static_cast<char>(Color::BLACK)) {
-		color = Color::BLACK;
-
-		//setting type, creating new figure, adding figure to black army and setting army's bitset
-		switch (col_type_loc[1]) {
-
-			case static_cast<char>(Type::KING) :
-				newFigure = new F_King(color, location);
-				_blackArmy.pushBack(newFigure);
-				_BKing = newFigure;
-
-				break;
-
-				case static_cast<char>(Type::QUEEN) :
-					newFigure = new F_Queen(color, location);
-					_blackArmy.pushBack(newFigure);
-
-					(_bit_blackArmy.test(bit_F_Queen1)) ?
-						_bit_blackArmy.set(bit_F_Queen2) : _bit_blackArmy.set(bit_F_Queen1);
-
-					break;
-
-					case static_cast<char>(Type::BISHOP) :
-						newFigure = new F_Bishop(color, location);
-						_blackArmy.pushBack(newFigure);
-
-						((location.x + location.y) % 2) ?
-							_bit_blackArmy.set(bit_F_Bishop1) : _bit_blackArmy.set(bit_F_Bishop2);
-
-						break;
-
-						case static_cast<char>(Type::KNIGHT) :
-							newFigure = new F_Knight(color, location);
-							_blackArmy.pushBack(newFigure);
-
-							(_bit_blackArmy.test(bit_F_Knight1)) ?
-								_bit_blackArmy.set(bit_F_Knight2) : _bit_blackArmy.set(bit_F_Knight1);
-
-							break;
-
-							case static_cast<char>(Type::ROOK) :
-								newFigure = new F_Rook(color, location);
-								_blackArmy.pushBack(newFigure);
-
-								(_bit_blackArmy.test(bit_F_Rook1)) ?
-									_bit_blackArmy.set(bit_F_Rook2) : _bit_blackArmy.set(bit_F_Rook1);
-
-								break;
-
-								case static_cast<char>(Type::PAWN) :
-									newFigure = new F_Pawn(color, location);
-									_blackArmy.pushBack(newFigure);
-									_pawnQuantity += 1;
-
-									break;
-
-								default:
-									/*_logMessage = EnteringCustomString + ErrorTypeCustomString +
-										col_type_loc.substr(0, 2) + L'\n';*/
-
-									break;
-		}
-
-		//setting first move state
-		if (col_type_loc[4] != L'1') {
-			newFigure->_firstMove = false;
-		}
-
-		_board[location.x][location.y] = newFigure;
-
-		/*_logMessage = EnteringCustomString + FigureIsPlacedString +
-			col_type_loc.substr(0, 4) + L'\n';*/
-
-		return;
+	else if (color == Color::BLACK) {
+		_currentArmy = &_blackArmy;
+		bit_currentArmy = &_bit_blackArmy;
 	}
 	else {
 		/*_logMessage = EnteringCustomString + ErrorColorCustomString +
 			col_type_loc.substr(0, 2) + L'\n';*/
-
 		return;
 	}
+
+	//setting type, creating new figure, adding figure to white army and setting army's bitset
+	switch (col_type_loc[1]) {
+		case static_cast<char>(Type::KING) :
+			newFigure = new F_King(color, location);
+			_currentArmy->pushBack(newFigure);
+			(color == Color::WHITE) ? _WKing = newFigure : _BKing = newFigure;
+			break;
+
+		case static_cast<char>(Type::QUEEN) :
+			newFigure = new F_Queen(color, location);
+			_currentArmy->pushBack(newFigure);
+			(bit_currentArmy->test(bit_F_Queen1)) ?
+				bit_currentArmy->set(bit_F_Queen2) : bit_currentArmy->set(bit_F_Queen1);
+			break;
+
+		case static_cast<char>(Type::BISHOP) :
+			newFigure = new F_Bishop(color, location);
+			_currentArmy->pushBack(newFigure);
+			((location.x + location.y) % 2) ?
+				bit_currentArmy->set(bit_F_Bishop1) : bit_currentArmy->set(bit_F_Bishop2);
+			break;
+
+		case static_cast<char>(Type::KNIGHT) :
+			newFigure = new F_Knight(color, location);
+			_currentArmy->pushBack(newFigure);
+			(bit_currentArmy->test(bit_F_Knight1)) ?
+				bit_currentArmy->set(bit_F_Knight2) : bit_currentArmy->set(bit_F_Knight1);
+			break;
+
+		case static_cast<char>(Type::ROOK) :
+			newFigure = new F_Rook(color, location);
+			_currentArmy->pushBack(newFigure);
+			(bit_currentArmy->test(bit_F_Rook1)) ?
+				bit_currentArmy->set(bit_F_Rook2) : bit_currentArmy->set(bit_F_Rook1);
+			break;
+
+		case static_cast<char>(Type::PAWN) :
+			newFigure = new F_Pawn(color, location);
+			_currentArmy->pushBack(newFigure);
+			_pawnQuantity += 1;
+			break;
+
+		default:
+			return;
+	}
+
+	//setting first move state
+	if (col_type_loc[4] != L'1') {
+		newFigure->_firstMove = false;
+	}
+
+	_board[location.x][location.y] = newFigure;
+
+	return;
 }
 
 const cocos2d::Vector<Figure*>* Core::getWhiteArmy() const {
@@ -1083,6 +1094,11 @@ const cocos2d::Vector<Figure*>* Core::getBlackArmy() const {
 const cocos2d::Vector<Figure*>* Core::getCurrentArmy() const
 {
 	return _currentArmy;
+}
+
+Figure* Core::getActiveKing() const
+{
+	return _activeKing;
 }
 
 const std::string& Core::getLogMessage() const {
@@ -1115,7 +1131,22 @@ const std::pair<double, double> Core::getGameDuration()
 	return std::pair<double, double>(_p1GameDuration, _p2GameDuration);
 }
 
+const std::vector<std::string>* Core::getMovesVector() const
+{
+	return &_movesVector;
+}
+
 const std::string& Core::getLastMove() const
 {
 	return _movesVector.back();
+}
+
+Figure* Core::getFigureOnBoard(Location point) const
+{
+	return _board[point.x][point.y];
+}
+
+void Core::setLogMessage(std::string logMessage)
+{
+	_logMessage = logMessage;
 }

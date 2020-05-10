@@ -5,7 +5,9 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <bitset>
+//#include <algorithm>
 
 #include "Specification.h"
 #include "Figure.h"
@@ -16,7 +18,7 @@ using namespace DEF_SETT;
 
 class Core {
 private:
-	// attributes
+// attributes
 
 	//// Board[SIZE][SIZE], BOARD_SIZE = 8;
 	Figure*** _board;
@@ -60,27 +62,36 @@ private:
 	time_t _turnDuration;
 	
 	// storing moves
-	std::vector<std::string> _movesVector = std::vector<std::string>(50);
+	std::vector<std::string> _movesVector;
 	//std::wstring _command; // for command line instructions
 	std::string _logMessage; // for game notifications
 
 	Figure* _figureToMove;
 
-	// methods
+// methods
 	bool init();
-	
 
 	cocos2d::Vec2 convertCoord(Location location);
 	std::string getMoveString(Location currentLocation, Location newLocation);
-	
 	void parseFigureDataString(std::string col_type_loc); //parsing string into figure's data
 
-public:
 	
-	// methods
+
+
+public:
+// attributes
+	// storing testsResults
+	std::vector<std::string> _testsResults;
+	
+// methods
 	static Core* sharedCore();
 
 	void initialSetup();
+
+	void saveData(std::string filename);
+
+	void loadData(const std::string& gameDataString, 
+		const std::string& wArmyDataString, const std::string& bArmyDataString, std::string filename);
 
 	void clearData(); // deleting existing game data to load saved game / customize new game
 
@@ -108,26 +119,19 @@ public:
 
 	bool isDraw();
 
-
-
-	// Testing:
-	//// creating new custom Game from string
-	void loadGameDataString(std::string dataString);
-
+	
 
 	void startTurnDurationCount();
 
 	
 	//// getters
-	//Figure* getFigureOnBoard(Location point) const;
-
-	//std::vector<Location>* getPossibleMoves(Figure* figure);
-
 	const cocos2d::Vector<Figure*>* getWhiteArmy() const;
 
 	const cocos2d::Vector<Figure*>* getBlackArmy() const;
 
 	const cocos2d::Vector<Figure*>* getCurrentArmy() const;
+
+	Figure* getActiveKing() const;
 
 	const std::string& getLogMessage() const;
 
@@ -137,7 +141,13 @@ public:
 
 	const std::pair<double, double> getGameDuration();
 
+	const std::vector<std::string>* getMovesVector() const;
+
 	const std::string& getLastMove() const;
 
+	Figure* getFigureOnBoard(Location point) const;
+
+	//setters
+	void setLogMessage(std::string logMessage);
 	
 };

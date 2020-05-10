@@ -1,19 +1,19 @@
-#include "SaveGameScene.h"
+#include "LoadGameScene.h"
 
 using namespace cocos2d;
 using namespace ui;
 using namespace DEF_SETT;
 namespace fs = std::filesystem;
 
-cocos2d::Scene* SaveGameScene::createScene() {
+cocos2d::Scene* LoadGameScene::createScene() {
 	cocos2d::Scene* scene = cocos2d::Scene::create();
-	auto layer = SaveGameScene::create();
-	scene->addChild(layer);
+	auto layer = LoadGameScene::create();
+	scene->addChild(layer, 0, "LoadGameScene");
 
 	return scene;
 }
 
-bool SaveGameScene::init() {
+bool LoadGameScene::init() {
 	if (!Layer::init())
 	{
 		return false;
@@ -50,12 +50,12 @@ bool SaveGameScene::init() {
 	scrollView->setScrollBarOpacity(255);
 	this->addChild(scrollView, 2);
 
-	//Adding SaveGameLabel label
-	auto saveGameLabel = Label::createWithTTF(SAVE_GAME_LABEL, FONT, LABEL_FONT_SIZE * 3);
-	saveGameLabel->setAnchorPoint(Point::ANCHOR_MIDDLE);
-	saveGameLabel->setColor(METALLIC_GOLD);
-	saveGameLabel->setPosition(winSize.width / 2, winSize.height / 2 + scrollView->getContentSize().height / 1.5f);
-	this->addChild(saveGameLabel, 2);
+	//Adding LoadGameLabel label
+	auto loadGameLabel = Label::createWithTTF(LOAD_GAME_LABEL, FONT, LABEL_FONT_SIZE * 3);
+	loadGameLabel->setAnchorPoint(Point::ANCHOR_MIDDLE);
+	loadGameLabel->setColor(METALLIC_GOLD);
+	loadGameLabel->setPosition(winSize.width / 2, winSize.height / 2 + scrollView->getContentSize().height / 1.5f);
+	this->addChild(loadGameLabel, 2);
 
 	//Adding TextField
 	auto plank = Sprite::createWithSpriteFrameName("Plank.png");
@@ -70,7 +70,7 @@ bool SaveGameScene::init() {
 	_textField->setPlaceHolder(PLACEHOLDER_SAVE_GAME);
 	_textField->setPlaceHolderColor(METALLIC_GOLD);
 	_textField->setMaxLengthEnabled(true);
-	_textField->setMaxLength(12);
+	_textField->setMaxLength(16);
 	plank->addChild(_textField);
 	this->addChild(plank, 4);
 
@@ -83,6 +83,7 @@ bool SaveGameScene::init() {
 
 	// creating buttons with existing filenames, adding them to scrollView
 	cocos2d::Vector<cocos2d::ui::Button*> exsistingFiles = cocos2d::Vector<cocos2d::ui::Button*>(10);
+	
 	for (auto& files : fs::directory_iterator(SavedGamesDir)) {
 		exsistingFiles.pushBack(Button::create("Images/Plank.png", "Images/Plank2.png"));
 		auto button = exsistingFiles.back();
@@ -92,8 +93,8 @@ bool SaveGameScene::init() {
 		button->setTitleAlignment(TextHAlignment::CENTER, TextVAlignment::CENTER);
 		button->setAnchorPoint(Point::ANCHOR_MIDDLE);
 		button->setTitleFontSize(LABEL_FONT_SIZE * 1.2f);
-		const float coordY = scrollView->getInnerContainerSize().height - 
-			LABEL_DISTANCE * (((exsistingFiles.size() - 1.0f ) * 2.0f) + 0.7f);
+		const float coordY = scrollView->getInnerContainerSize().height -
+			LABEL_DISTANCE * (((exsistingFiles.size() - 1.0f) * 2.0f) + 0.7f);
 		button->setPosition(Vec2(scrollView->getInnerContainer()->getContentSize().width / 2, coordY));
 		//// Increasing innerContainer if needed
 		if (button->getPosition().y - LABEL_DISTANCE * 2 < 0) {
@@ -105,7 +106,16 @@ bool SaveGameScene::init() {
 			}
 		}
 		button->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
-			_textField->setString(dynamic_cast<ui::Button*>(sender)->getTitleText());
+			switch (type)
+			{
+			case ui::Widget::TouchEventType::BEGAN:
+				break;
+			case ui::Widget::TouchEventType::ENDED:
+				_textField->setString(dynamic_cast<ui::Button*>(sender)->getTitleText());
+				break;
+			default:
+				break;
+			}
 		});
 		scrollView->addChild(button, 3);
 	}
@@ -113,18 +123,16 @@ bool SaveGameScene::init() {
 	//Adding button to save game
 	auto buttonPlay = Button::create("Images/PlayButt.png", "Images/PlayButt2.png");
 	buttonPlay->setAnchorPoint(Point::ANCHOR_MIDDLE_LEFT);
-	buttonPlay->setPosition(Vec2(winSize.width / 2 + 
+	buttonPlay->setPosition(Vec2(winSize.width / 2 +
 		plank->getContentSize().width / 2 + 10, plank->getPosition().y));
 
 	buttonPlay->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
 		std::string filename = _textField->getString();
+
 		switch (type) {
 		case ui::Widget::TouchEventType::BEGAN:
 			break;
 		case ui::Widget::TouchEventType::ENDED:
-			//deleting whitespaces if needed
-			filename.erase(remove_if(filename.begin(), filename.end(), isspace), filename.end());
-
 			if (filename != "") {
 				size_t length = filename.length();
 				if (length > 4) {
@@ -135,9 +143,31 @@ bool SaveGameScene::init() {
 				else {
 					filename += ".txt";
 				}
-				_core->saveData(filename);
-				_core->startTurnDurationCount();
-				Director::getInstance()->popScene();
+
+				std::string filenamePath = FileUtils::getInstance()->getWritablePath() +
+					SAVED_GAMES_DIR + '/' + filename;
+
+				std::ifstream load(filenamePath);
+				if (load) {
+					std::string gameDataString;
+					std::string wArmyDataString;
+					std::string bArmyDataString;
+
+					std::getline(load, gameDataString);
+					std::getline(load, wArmyDataString);
+					std::getline(load, bArmyDataString);
+
+					_core->loadData(gameDataString, wArmyDataString, bArmyDataString, filename);
+					load.close();
+
+					Director::getInstance()->popToRootScene();
+					Director::getInstance()->pushScene(TransitionCrossFade::create(1.0, NewGameLayer::createScene()));
+				}
+				else {
+					_core->setLogMessage(NoSuchLoadFileString + filename);
+					_core->startTurnDurationCount();
+					Director::getInstance()->popScene();
+				}
 			}
 			break;
 		default:

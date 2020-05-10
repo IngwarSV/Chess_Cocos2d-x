@@ -158,6 +158,8 @@ xcopy "$(ProjectDir)..\Resources" "$(OutDir)\Resources\" /D /E /I /F /Y
     <ClCompile Include="..\Classes\Figure.cpp" />
     <ClCompile Include="..\Classes\GameMenu.cpp" />
     <ClCompile Include="..\Classes\HelloWorldScene.cpp" />
+    <ClCompile Include="..\Classes\LoadGameScene.cpp" />
+    <ClCompile Include="..\Classes\MyTests.cpp" />
     <ClCompile Include="..\Classes\NewGameLayer.cpp" />
     <ClCompile Include="..\Classes\QuitGameScene.cpp" />
     <ClCompile Include="..\Classes\SaveGameScene.cpp" />
@@ -170,6 +172,8 @@ xcopy "$(ProjectDir)..\Resources" "$(OutDir)\Resources\" /D /E /I /F /Y
     <ClInclude Include="..\Classes\Figure.h" />
     <ClInclude Include="..\Classes\GameMenu.h" />
     <ClInclude Include="..\Classes\HelloWorldScene.h" />
+    <ClInclude Include="..\Classes\LoadGameScene.h" />
+    <ClInclude Include="..\Classes\MyTests.h" />
     <ClInclude Include="..\Classes\NewGameLayer.h" />
     <ClInclude Include="..\Classes\QuitGameScene.h" />
     <ClInclude Include="..\Classes\SaveGameScene.h" />

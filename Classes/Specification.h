@@ -73,7 +73,7 @@ namespace DEF_SETT {
 	const std::string GOLDEN_B_ICON{ "GoldenBishop.png" };
 
 	// Saved games path
-	const std::string SAVED_GAMES_DIR = "\\SavedGames";
+	const std::string SAVED_GAMES_DIR = "SavedGames";
 
 	// SCROLL_VIEW (for moves's log) STAFF
 	//// SCROLL_VIEW_POS
@@ -92,6 +92,9 @@ namespace DEF_SETT {
 	
 	//quitGameLabel
 	const std::string QUIT_GAME_LABEL{ "Quit Game?" };
+	const std::string SAVE_GAME_LABEL{ "Save Game" };
+	const std::string PLACEHOLDER_SAVE_GAME{ "Type here" };
+	const std::string LOAD_GAME_LABEL{ "Load Game" };
 	
 
 
@@ -142,6 +145,15 @@ namespace DEF_SETT {
 	const std::string WarningCheckmateString{ " CHECKMATE: GAME OVER!" };
 	const std::string ChoosePromotionString{ "Choose promotion: Q, B, N, R" };
 	const std::string PromotionSuccessString = "Promotion successful!";
+	
+	const std::string SuccessSaveGameString = "File was saved as: ";
+	const std::string ErrorSaveGameString = "Error while creating file: ";
+	const std::string ErrorLoadGameString = "No files to load";
+	const std::string NoSuchLoadFileString = "No such file in directory: ";
+	const std::string LoadGameSuccessString = "File was successfully loaded: ";
+
+
+
 
 }
 
@@ -171,12 +183,7 @@ const std::wstring ErrorTypeCustomString = L"Invalid parameter for type of the f
 const std::wstring ErrorColorCustomString = L"Invalid parameter for color of the figure: ";
 const std::wstring FigureIsPlacedString = L"Figure is placed: ";
 const std::wstring SaveGameAsString = L"Save as: ";
-const std::wstring SuccessSaveGameString = L"File saved as: ";
-const std::wstring ErrorSaveGameString = L"Error create file: ";
-const std::wstring ErrorLoadGameString = L"No files to load\n";
-const std::wstring ChooseLoadFileString = L"Choose file (print name without .txt):\n";
-const std::wstring NoSuchLoadFileString = L"No such file in directory: ";
-const std::wstring LoadGameSuccessString = L"Successfully loaded: ";
+
 
 
 

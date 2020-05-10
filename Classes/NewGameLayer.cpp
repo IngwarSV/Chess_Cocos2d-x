@@ -1,7 +1,9 @@
 #include "NewGameLayer.h"
 
+#define TESTS 1
 
 using namespace cocos2d;
+namespace fs = std::filesystem;
 using namespace DEF_SETT;
 
 cocos2d::Scene* NewGameLayer::createScene() {
@@ -13,7 +15,6 @@ cocos2d::Scene* NewGameLayer::createScene() {
 }
 
 bool NewGameLayer::init() {
-	//
 	if (!Layer::init())
 	{
 		return false;
@@ -21,9 +22,6 @@ bool NewGameLayer::init() {
 
 	// Getting windows size
 	auto winSize = Director::getInstance()->getWinSize();
-
-	// Setting position in the middle of the windows
-	//Vec2 center(winSize.width / 2, winSize.height / 2);
 
 	// Setting background with desk (desk corner 73,104)
 	auto background = cocos2d::Sprite::create("NewGameLayer.png");
@@ -60,6 +58,55 @@ bool NewGameLayer::init() {
 	auto menu = Menu::create(SaveGame, LoadGame, GameSettings, QuitGame, nullptr);
 	this->addChild(menu);
 
+	//Adding ScrollView for movesLog (BUTTONS?????)
+	_scrollView = cocos2d::ui::ScrollView::create();
+	_scrollView->setDirection(ui::ScrollView::Direction::VERTICAL);
+	_scrollView->setContentSize(SCROLL_VIEW_SIZE);
+	_scrollView->setBackGroundColorType(ui::ScrollView::BackGroundColorType::NONE);
+	_scrollView->setPosition(SCROLL_VIEW_POS);
+	_scrollView->setInnerContainerSize(Size(SCROLL_VIEW_SIZE.width, winSize.height));
+	float CoordY = (_scrollView->getInnerContainerSize().height - _scrollView->getContentSize().height) * (-1);
+	_scrollView->setInnerContainerPosition(Vec2(0.0f, CoordY));
+	_scrollView->setBounceEnabled(false);
+	_scrollView->setInertiaScrollEnabled(false);
+	_scrollView->setScrollBarEnabled(true);
+	//_scrollView->setScrollBarAutoHideTime(winSize.height);
+	_scrollView->setScrollBarWidth(10);
+	_scrollView->setScrollBarPositionFromCorner(Vec2(14, 15));
+	_scrollView->setScrollBarColor(METALLIC_GOLD);
+	_scrollView->setScrollBarOpacity(255);
+	//// Adding "Game started!" string to ScrollView
+	auto textWidget = ui::Text::create();
+	textWidget->setString(GAME_STARTED_STRING);
+	textWidget->setAnchorPoint(Point::ANCHOR_BOTTOM_LEFT);
+	textWidget->setFontName(FONT);
+	textWidget->setFontSize(LABEL_FONT_SIZE);
+	textWidget->setColor(METALLIC_GOLD);
+	textWidget->setPosition(Vec2(labelCoordX, _scrollView->getInnerContainerSize().height - LABEL_DISTANCE));
+	_playersMoves.pushBack(textWidget);
+	_scrollView->addChild(textWidget);
+	this->addChild(_scrollView, 1);
+
+#if TESTS
+	//adding testsResults to scrollView
+	MyTests tests;
+	tests.runCoreTests();
+
+	for (auto testsResult : _core->_testsResults) {
+		updateMovesLog(testsResult);
+	}
+	_core->_testsResults.clear();
+#endif
+
+	//updating scrollViewContent in case of loading game
+	for (auto lastMove : *(_core->getMovesVector())) {
+		std::string text = (lastMove[0] == 'W') ? WHITE_PL_STRING : BLACK_PL_STRING;
+		text += lastMove.substr(2, 5) + '\t' + lastMove.substr(7, 5);
+
+		updateMovesLog(text);
+	}
+
+	// adding figures on the board
 	for (auto figure : *_core->getWhiteArmy()) {
 		this->addChild(figure, BOARD_SIZE - figure->getLocation().x);
 	}
@@ -69,13 +116,11 @@ bool NewGameLayer::init() {
 	}
 
 	//Adding logMessages label
-	_logMessageLabel = Label::createWithTTF(_core->getLogMessage(), "fonts/royal-serif.ttf", 22);
+	_logMessageLabel = Label::createWithTTF(_core->getLogMessage(), FONT, LABEL_DISTANCE);
 	_logMessageLabel->setAnchorPoint(Vec2(0.0f, 0.0f));
 	_logMessageLabel->setColor(METALLIC_GOLD);
 	_logMessageLabel->setPosition(LOG_MESS_POS);
 	this->addChild(_logMessageLabel, 100);
-
-
 
 	//Adding Timers labels
 	_p1Timer = Label::createWithTTF("00:00", "fonts/royal-serif.ttf", 22);
@@ -98,35 +143,7 @@ bool NewGameLayer::init() {
 	_blackKingIcon->setPosition(ACT_SIDE_POS2);
 	this->addChild(_blackKingIcon, 100);
 
-	//Adding ScrollView for movesLog (BUTTONS?????)
-	_scrollView = cocos2d::ui::ScrollView::create();
-	_scrollView->setDirection(ui::ScrollView::Direction::VERTICAL);
-	_scrollView->setContentSize(SCROLL_VIEW_SIZE);
-	_scrollView->setBackGroundColorType(ui::ScrollView::BackGroundColorType::NONE);
-	_scrollView->setPosition(SCROLL_VIEW_POS);
-	_scrollView->setInnerContainerSize(Size(SCROLL_VIEW_SIZE.width, winSize.height));
-		float CoordY = (_scrollView->getInnerContainerSize().height - _scrollView->getContentSize().height) * (-1);
-	_scrollView->setInnerContainerPosition(Vec2(0.0f, CoordY));
-	_scrollView->setBounceEnabled(false);
-	_scrollView->setInertiaScrollEnabled(false);
-	_scrollView->setScrollBarEnabled(true);
-	//_scrollView->setScrollBarAutoHideTime(winSize.height);
-	_scrollView->setScrollBarWidth(10);
-	_scrollView->setScrollBarPositionFromCorner(Vec2(14, 15));
-	_scrollView->setScrollBarColor(METALLIC_GOLD);
-	_scrollView->setScrollBarOpacity(255);
-	//// Adding "Game started!" string to ScrollView
-	auto textWidget = ui::Text::create();
-	textWidget->setString(GAME_STARTED_STRING);
-	textWidget->setAnchorPoint(Point::ANCHOR_BOTTOM_LEFT);
-	textWidget->setFontName(FONT);
-	textWidget->setFontSize(LABEL_FONT_SIZE);
-	textWidget->setColor(METALLIC_GOLD);
-	textWidget->setPosition(Vec2(labelCoordX, _scrollView->getInnerContainerSize().height - LABEL_DISTANCE));
-	_playersMoves.pushBack(textWidget);
 	
-	_scrollView->addChild(textWidget);
-	this->addChild(_scrollView, 1);
 
 	//Handle Touch Events
 	auto listener = EventListenerMouse::create();
@@ -135,21 +152,65 @@ bool NewGameLayer::init() {
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 	
 
-	// launching update method every frame
+	// Launching update method every frame
 	scheduleUpdate();
 
-	// starting first turn
+	// Setting SideToMoveIcon
+	setActiveIcon();
+
+	// Starting first turn
 	_core->startTurnDurationCount();
 
-
-	
-
-
-
-
-
-
 	return true;
+}
+
+void NewGameLayer::loadGame(std::string filenamePath, std::string filename)
+{
+	//std::ifstream load(filenamePath);
+	//if (load) {
+	//	// deleting existing game data, executing initial setup in core
+	//	/*_core->clearData();
+	//	_core->initialSetup();*/
+	//	
+	//	// setting gameDuration
+	//	std::pair<double, double> gameDuration;
+	//	load >> gameDuration.first;
+	//	load >> gameDuration.second;
+	//	_core->setGameDuration(gameDuration);
+	//	// MAKING all saved moves
+	//	std::string savedMove;
+	//	//std::getline(load, savedMove);
+	//	while (!load.eof()) {
+	//		savedMove = "";
+	//		//std::getline(load, savedMove);
+	//		load >> savedMove;
+	//		if (savedMove.length() != 12) {
+	//			continue; 
+	//		}
+	//		Location figureCurrentPosition;
+	//		Location figureNewPosition;
+	//		
+	//		figureCurrentPosition.x = static_cast<int>(savedMove[3] - '1');
+	//		figureCurrentPosition.y = static_cast<int>(savedMove[2] - 'A');
+	//		figureNewPosition.x = static_cast<int>(savedMove[6] - '1');
+	//		figureNewPosition.y = static_cast<int>(savedMove[5] - 'A');
+
+	//		_core->processEvent(figureCurrentPosition);
+	//		_core->processEvent(figureNewPosition);
+	//		
+	//		//Updating movesLog
+	//		updateMovesLog();
+	//	}
+	//}
+	//else {
+	//	_core->clearData();
+	//	Director::getInstance()->popToRootScene();
+
+	//	return;
+	//}
+
+	//load.close();
+	//_core->setLogMessage(LoadGameSuccessString + filename);
 }
 
 void NewGameLayer::processEvent(cocos2d::Vec2 location)
@@ -178,50 +239,17 @@ void NewGameLayer::processEvent(cocos2d::Vec2 location)
 		setActiveIcon();
 
 		//Updating movesLog
-		auto winSize = Director::getInstance()->getWinSize();
-		std::string lastMove = _core->getLastMove();
+		auto lastMove = _core->getLastMove();
 		std::string text = (lastMove[0] == 'W') ? WHITE_PL_STRING : BLACK_PL_STRING;
-		auto textWidget = ui::Text::create();
-
-		if (textWidget) {
-			text += lastMove.substr(2, 5) + '\t' + lastMove.substr(7, 5);
-			textWidget->setString(text);
-			textWidget->setAnchorPoint(Point::ANCHOR_BOTTOM_LEFT);
-			textWidget->setFontName(FONT);
-			(lastMove[0] == 'W') ? textWidget->setColor(METALLIC_GOLD) : textWidget->setColor(CHOKOLATE);
-
-			float newLabelPosition = _playersMoves.back()->getPosition().y - LABEL_DISTANCE;
-			float scrollViewInnerPosition = _scrollView->getInnerContainerPosition().y;
-			//// Increasing innerContainer if needed
-			if (newLabelPosition < 0) {
-				float size = _scrollView->getInnerContainer()->getContentSize().height + winSize.height;
-				_scrollView->setInnerContainerSize(Size(_scrollView->getInnerContainerSize().width, size));
-				for (auto it = _playersMoves.begin(); it != _playersMoves.end(); ++it) {
-					(*it)->setPosition(Vec2(labelCoordX, (*it)->getPosition().y + winSize.height));
-				}
-				newLabelPosition = _playersMoves.back()->getPosition().y - LABEL_DISTANCE;
-				_scrollView->getInnerContainer()->setPositionY(scrollViewInnerPosition - winSize.height);
-				scrollViewInnerPosition = _scrollView->getInnerContainerPosition().y;
-			}
-			//// Updating position for innerContainer if needed 
-			if (newLabelPosition < scrollViewInnerPosition * (-1)) {
-				_scrollView->getInnerContainer()->setPositionY(scrollViewInnerPosition + _scrollView->getContentSize().height - LABEL_DISTANCE);
-			}
-
-			textWidget->setPosition(Vec2(labelCoordX, _playersMoves.back()->getPosition().y - LABEL_DISTANCE));
-			textWidget->setFontSize(LABEL_FONT_SIZE);
-			_playersMoves.pushBack(textWidget);
-			_scrollView->addChild(textWidget);
-		}
+		text += lastMove.substr(2, 5) + '\t' + lastMove.substr(7, 5);
+		updateMovesLog(text);
 	}
-
-	_logMessageLabel->setString(_core->getLogMessage());
 }
 
 void NewGameLayer::update(float deltaTime) {
 	
 	updateTimers();
-
+	_logMessageLabel->setString(_core->getLogMessage());
 }
 
 void NewGameLayer::updateTimers() {
@@ -257,6 +285,41 @@ void NewGameLayer::updateTimers() {
 	_p2Timer->setString(timer);
 }
 
+void NewGameLayer::updateMovesLog(std::string lastMove)
+{
+	auto winSize = Director::getInstance()->getWinSize();
+	auto textWidget = ui::Text::create();
+	if (textWidget) {
+		textWidget->setString(lastMove);
+		textWidget->setAnchorPoint(Point::ANCHOR_BOTTOM_LEFT);
+		textWidget->setFontName(FONT);
+		(lastMove[0] == 'W') ? textWidget->setColor(METALLIC_GOLD) : textWidget->setColor(CHOKOLATE);
+
+		float newLabelPosition = _playersMoves.back()->getPosition().y - LABEL_DISTANCE;
+		float scrollViewInnerPosition = _scrollView->getInnerContainerPosition().y;
+		//// Increasing innerContainer if needed
+		if (newLabelPosition < 0) {
+			float size = _scrollView->getInnerContainer()->getContentSize().height + winSize.height;
+			_scrollView->setInnerContainerSize(Size(_scrollView->getInnerContainerSize().width, size));
+			for (auto it = _playersMoves.begin(); it != _playersMoves.end(); ++it) {
+				(*it)->setPosition(Vec2(labelCoordX, (*it)->getPosition().y + winSize.height));
+			}
+			newLabelPosition = _playersMoves.back()->getPosition().y - LABEL_DISTANCE;
+			_scrollView->getInnerContainer()->setPositionY(scrollViewInnerPosition - winSize.height);
+			scrollViewInnerPosition = _scrollView->getInnerContainerPosition().y;
+		}
+		//// Updating position for innerContainer if needed 
+		if (newLabelPosition < scrollViewInnerPosition * (-1)) {
+			_scrollView->getInnerContainer()->setPositionY(scrollViewInnerPosition + _scrollView->getContentSize().height - LABEL_DISTANCE);
+		}
+
+		textWidget->setPosition(Vec2(labelCoordX, _playersMoves.back()->getPosition().y - LABEL_DISTANCE));
+		textWidget->setFontSize(LABEL_FONT_SIZE);
+		_playersMoves.pushBack(textWidget);
+		_scrollView->addChild(textWidget);
+	}
+}
+
 void NewGameLayer::onMouseDown(Event* event)
 {
 	EventMouse* mouseEvent = dynamic_cast<EventMouse*>(event);
@@ -272,10 +335,17 @@ void NewGameLayer::onSaveGameClick(cocos2d::Ref* sender)
 
 void NewGameLayer::onLoadGameClick(cocos2d::Ref* sender)
 {
-	/*auto gameScene = Scene::create();
-	gameScene->addChild(GameLayer::create());
+	std::string SavedGamesDir = FileUtils::getInstance()->getWritablePath();
+	SavedGamesDir += SAVED_GAMES_DIR;
+	
+	if (!fs::is_directory(SavedGamesDir) || fs::is_empty(SavedGamesDir)) {
+		_core->setLogMessage(ErrorLoadGameString);
 
-	Director::getInstance()->replaceScene(gameScene);*/
+		return;
+	}
+
+	this->pause();
+	Director::getInstance()->pushScene(LoadGameScene::createScene());
 }
 
 void NewGameLayer::onGameSettingsClick(cocos2d::Ref* sender)
@@ -294,6 +364,7 @@ void NewGameLayer::onQuitGameClick(cocos2d::Ref* sender)
 
 void NewGameLayer::setActiveIcon() {
 	if (_core->getHalfTurn() % 2) {
+		//this->on
 		_whiteKingIcon->setSpriteFrame(WK_ACT_ICON);
 		_blackKingIcon->setSpriteFrame(BK_PAS_ICON);
 	}

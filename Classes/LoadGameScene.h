@@ -4,6 +4,8 @@
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
 #include <filesystem> // creating directory for Saved Games and loading file with saved data
+//#include <fstream>
+//#include <string>
 
 #include "Core.h"
 #include "NewGameLayer.h"
@@ -11,7 +13,7 @@
 
 
 
-class SaveGameScene : public cocos2d::Layer {
+class LoadGameScene : public cocos2d::Layer {
 private:
 	Core* _core = Core::sharedCore();
 	cocos2d::ui::TextField* _textField = nullptr;
@@ -21,5 +23,7 @@ public:
 
 	virtual bool init() override;
 
-	CREATE_FUNC(SaveGameScene);
+	CREATE_FUNC(LoadGameScene);
+
 };
+

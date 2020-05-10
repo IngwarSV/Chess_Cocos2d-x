@@ -3,9 +3,12 @@
 
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
+#include <filesystem>
 
 #include "Core.h"
+#include "MyTests.h"
 #include "SaveGameScene.h"
+#include "LOadGameScene.h"
 #include "QuitGameScene.h"
 
 class NewGameLayer : public cocos2d::Layer {
@@ -21,6 +24,7 @@ private:
 
 	void setActiveIcon();
 	void updateTimers();
+	void updateMovesLog(std::string lastMove);
 
 public:
 	static cocos2d::Scene* createScene();
@@ -28,6 +32,8 @@ public:
 	virtual bool init();
 
 	CREATE_FUNC(NewGameLayer);
+
+	void loadGame(std::string filenamePath, std::string filename);
 
 	void processEvent(cocos2d::Vec2 location);
 
