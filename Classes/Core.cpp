@@ -2,6 +2,7 @@
 
 using namespace cocos2d;
 using namespace std::chrono;
+using namespace CocosDenshion;
 
 static bool s_firstRun = true;
 static Core s_sharedCore;
@@ -103,6 +104,23 @@ bool Core::init() {
 	auto spritecache = SpriteFrameCache::getInstance();
 
 	spritecache->addSpriteFramesWithFile("Images.plist", "Images.png");
+
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(CHESS_CLOCK.c_str());
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(MAIN_MUSIC_THEME.c_str());
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(GAME_OVER_MUSIC.c_str());
+	SimpleAudioEngine::getInstance()->preloadEffect(MOVE_SOUND1.c_str());
+	SimpleAudioEngine::getInstance()->preloadEffect(MOVE_SOUND2.c_str());
+	SimpleAudioEngine::getInstance()->preloadEffect(MOVE_SOUND3.c_str());
+	SimpleAudioEngine::getInstance()->preloadEffect(MOVE_SOUND4.c_str());
+	SimpleAudioEngine::getInstance()->preloadEffect(MOVE_SOUND5.c_str());
+	SimpleAudioEngine::getInstance()->preloadEffect(CHECK_SOUND.c_str());
+	SimpleAudioEngine::getInstance()->preloadEffect(DRAW_SOUND.c_str());
+
+	
+	
+	
+	SimpleAudioEngine::getInstance()->setEffectsVolume(1.0f);
+	SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(1.0f);
 
 	return true;
 }
@@ -920,6 +938,9 @@ void Core::clearData()
 }
 
 void Core::makeMove(Figure* figureToMove, Location currentLocation, Location newLocation) {
+	std::string effect = "Sounds/Move" + std::to_string(rand() % MOVES_SOUND_AMOUNT + 1) + ".mp3";
+	SimpleAudioEngine::getInstance()->playEffect(effect.c_str());
+
 	_board[currentLocation.x][currentLocation.y] = nullptr;
 	_board[newLocation.x][newLocation.y] = figureToMove;
 	figureToMove->setLocation(newLocation);
@@ -970,12 +991,20 @@ bool Core::endTurn(Location currentLocation, Location newLocation)
 	
 	if (isCheck()) {
 		_CHECK = true;
+		
 		if (isCheckmate()) {
 			_gameOver = true;
+			SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+			SimpleAudioEngine::getInstance()->playBackgroundMusic(GAME_OVER_MUSIC.c_str(), false);
+		}
+		else {
+			SimpleAudioEngine::getInstance()->playEffect(CHECK_SOUND.c_str());
 		}
 	}
 	else if (isDraw()) {
 		_gameOver = true;
+		SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+		SimpleAudioEngine::getInstance()->playEffect(DRAW_SOUND.c_str());
 	}
 
 	return true;
@@ -1099,6 +1128,11 @@ const cocos2d::Vector<Figure*>* Core::getCurrentArmy() const
 Figure* Core::getActiveKing() const
 {
 	return _activeKing;
+}
+
+const Figure* Core::getFigureToPromote() const
+{
+	return _figureToPromote;
 }
 
 const std::string& Core::getLogMessage() const {

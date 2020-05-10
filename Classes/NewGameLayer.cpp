@@ -1,10 +1,11 @@
 #include "NewGameLayer.h"
 
-#define TESTS 1
+//#define TESTS 1
 
 using namespace cocos2d;
 namespace fs = std::filesystem;
 using namespace DEF_SETT;
+using namespace CocosDenshion;
 
 cocos2d::Scene* NewGameLayer::createScene() {
 	cocos2d::Scene* scene = cocos2d::Scene::create();
@@ -158,6 +159,9 @@ bool NewGameLayer::init() {
 	// Setting SideToMoveIcon
 	setActiveIcon();
 
+	// Play BackgroundMusic
+	SimpleAudioEngine::getInstance()->playBackgroundMusic(CHESS_CLOCK.c_str(), true);
+
 	// Starting first turn
 	_core->startTurnDurationCount();
 
@@ -232,7 +236,7 @@ void NewGameLayer::processEvent(cocos2d::Vec2 location)
 
 	if (_core->processEvent(boardLocation)) {
 		if (_core->getGameOver()) {
-			_eventDispatcher->removeEventListenersForTarget(this);
+			this->pause();
 			//>pauseEventListenersForTarget(this);
 		}
 		// Setting SideToMoveIcon
@@ -330,6 +334,11 @@ void NewGameLayer::onMouseDown(Event* event)
 void NewGameLayer::onSaveGameClick(cocos2d::Ref* sender)
 {
 	this->pause();
+	if (_core->getGameOver()) {
+		_core->setLogMessage(ErrorSaveGameOverString);
+
+		return;
+	}
 	Director::getInstance()->pushScene(SaveGameScene::createScene());
 }
 
@@ -343,6 +352,14 @@ void NewGameLayer::onLoadGameClick(cocos2d::Ref* sender)
 
 		return;
 	}
+	
+	if (_core->getFigureToPromote()) {
+		_core->setLogMessage(ErrorLoadDuringPromotionString);
+
+		return;
+	}
+
+
 
 	this->pause();
 	Director::getInstance()->pushScene(LoadGameScene::createScene());

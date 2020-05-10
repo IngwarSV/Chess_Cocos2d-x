@@ -1,6 +1,8 @@
 #pragma once
 
 #include "cocos2d.h"
+#include "audio/include/SimpleAudioEngine.h"
+
 #include "Core.h"
 #include "NewGameLayer.h"
 

@@ -1,8 +1,7 @@
 #include "GameMenu.h"
 #include <string>
-//#include "audio/include/SimpleAudioEngine.h";
-//
-//using namespace CocosDenshion;
+
+using namespace CocosDenshion;
 using namespace cocos2d;
 
 
@@ -18,7 +17,10 @@ cocos2d::Scene* GameMenu::createScene()
 
 void GameMenu::update(float deltaTime)
 {
-
+	if (!SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying())
+	{
+		SimpleAudioEngine::getInstance()->playBackgroundMusic(MAIN_MUSIC_THEME.c_str(), false);
+	}
 }
 
 bool GameMenu::init()
@@ -85,8 +87,11 @@ bool GameMenu::init()
 		
 	this->addChild(menu);
 
-	// Play theme
-	//Core::sharedCore()->setBackgroundMusic(music_theme, true);
+	// Play BackgroundMusic
+	SimpleAudioEngine::getInstance()->playBackgroundMusic(MAIN_MUSIC_THEME.c_str(), false);
+
+	// Launching update method every frame
+	scheduleUpdate();
 
 	return true;
 }

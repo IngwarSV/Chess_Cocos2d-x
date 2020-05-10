@@ -4,6 +4,7 @@
 #include "cocos2d.h"
 #include "Core.h"
 #include "ui/CocosGUI.h"
+#include "audio/include/SimpleAudioEngine.h"
 
 #include "NewGameLayer.h"
 #include "Specification.h"

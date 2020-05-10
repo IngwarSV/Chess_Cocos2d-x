@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
+#include "audio/include/SimpleAudioEngine.h"
 #include <filesystem>
 
 #include "Core.h"

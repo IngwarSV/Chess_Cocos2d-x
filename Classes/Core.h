@@ -1,13 +1,15 @@
+//Alexandr Zhelanov, https://soundcloud.com/alexandr-zhelanov
+
 #pragma once
 
 #include "cocos2d.h"
-
+#include "audio/include/SimpleAudioEngine.h"
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <fstream>
 #include <bitset>
-//#include <algorithm>
+
 
 #include "Specification.h"
 #include "Figure.h"
@@ -132,6 +134,8 @@ public:
 	const cocos2d::Vector<Figure*>* getCurrentArmy() const;
 
 	Figure* getActiveKing() const;
+
+	const Figure* getFigureToPromote() const;
 
 	const std::string& getLogMessage() const;
 

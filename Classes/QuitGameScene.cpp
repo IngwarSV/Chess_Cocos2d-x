@@ -2,6 +2,7 @@
 
 using namespace cocos2d;
 using namespace ui;
+using namespace CocosDenshion;
 using namespace DEF_SETT;
 
 cocos2d::Scene* QuitGameScene::createScene() {
@@ -20,6 +21,9 @@ bool QuitGameScene::init() {
 	}
 
 	auto winSize = Director::getInstance()->getWinSize();
+
+	// pause BackgroundMusic 
+	SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
 
 	// Setting background
 	auto background = cocos2d::Sprite::create("BG2HD.png");
@@ -47,16 +51,21 @@ bool QuitGameScene::init() {
 	
 	buttonYES->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
 		_core->clearData();
+		SimpleAudioEngine::getInstance()->stopBackgroundMusic();
 		Director::getInstance()->popToRootScene();
 	});
 	
 	buttonNO->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
+		SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
 		_core->startTurnDurationCount();
 		Director::getInstance()->popScene();
 	});
 
 	this->addChild(buttonYES, 2);
 	this->addChild(buttonNO, 2);
+
+
+	
 
 	return true;
 }

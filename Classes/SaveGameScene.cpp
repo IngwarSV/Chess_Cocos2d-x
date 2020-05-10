@@ -2,6 +2,7 @@
 
 using namespace cocos2d;
 using namespace ui;
+using namespace CocosDenshion;
 using namespace DEF_SETT;
 namespace fs = std::filesystem;
 
@@ -20,6 +21,9 @@ bool SaveGameScene::init() {
 	}
 
 	auto winSize = Director::getInstance()->getWinSize();
+
+	// pause BackgroundMusic 
+	SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
 
 	// Setting background
 	auto background = cocos2d::Sprite::create("BG2HD.png");
@@ -136,6 +140,7 @@ bool SaveGameScene::init() {
 					filename += ".txt";
 				}
 				_core->saveData(filename);
+				SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
 				_core->startTurnDurationCount();
 				Director::getInstance()->popScene();
 			}
@@ -152,6 +157,7 @@ bool SaveGameScene::init() {
 	buttonQuit->setPosition(Vec2(winSize.width - 50, winSize.height - 50));
 
 	buttonQuit->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
+		SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
 		_core->startTurnDurationCount();
 		Director::getInstance()->popScene();
 	});

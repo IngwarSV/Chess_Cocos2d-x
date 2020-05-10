@@ -61,7 +61,6 @@ namespace DEF_SETT {
 	const cocos2d::Color3B METALLIC_GOLD{ 212, 175, 55 };
 	const cocos2d::Color3B CHOKOLATE{ 210,105,30 };
 
-
 	// Images for sprites
 	const std::string WK_ACT_ICON{ "WK_ACT_ForTurns.png" };
 	const std::string WK_PAS_ICON{ "WK_PAS_ForTurns.png" };
@@ -71,6 +70,23 @@ namespace DEF_SETT {
 	const std::string GOLDEN_R_ICON{ "GoldenRook.png" };
 	const std::string GOLDEN_H_ICON{ "GoldenHorse.png" };
 	const std::string GOLDEN_B_ICON{ "GoldenBishop.png" };
+
+	// Music
+	const int MOVES_SOUND_AMOUNT = 5;
+	const std::string CHESS_CLOCK{ "Sounds/ChessClock.mp3" };
+	const std::string MAIN_MUSIC_THEME{ "Sounds/MenuTheme1.mp3" };
+	const std::string GAME_OVER_MUSIC{ "Sounds/GameOver.mp3" };
+	const std::string MOVE_SOUND1{ "Sounds/Move1.mp3" };
+	const std::string MOVE_SOUND2{ "Sounds/Move2.mp3" };
+	const std::string MOVE_SOUND3{ "Sounds/Move3.mp3" };
+	const std::string MOVE_SOUND4{ "Sounds/Move4.mp3" };
+	const std::string MOVE_SOUND5{ "Sounds/Move5.mp3" };
+	const std::string CHECK_SOUND{ "Sounds/Sword1.mp3" };
+	const std::string DRAW_SOUND{ "Sounds/Draw1.mp3" };
+	
+	
+
+
 
 	// Saved games path
 	const std::string SAVED_GAMES_DIR = "SavedGames";
@@ -148,10 +164,11 @@ namespace DEF_SETT {
 	
 	const std::string SuccessSaveGameString = "File was saved as: ";
 	const std::string ErrorSaveGameString = "Error while creating file: ";
+	const std::string ErrorSaveGameOverString = "Can't save, game over";
 	const std::string ErrorLoadGameString = "No files to load";
 	const std::string NoSuchLoadFileString = "No such file in directory: ";
 	const std::string LoadGameSuccessString = "File was successfully loaded: ";
-
+	const std::string ErrorLoadDuringPromotionString = "Can't load during promotion";
 
 
 
