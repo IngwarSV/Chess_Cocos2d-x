@@ -1,9 +1,10 @@
 #include "GameMenu.h"
 #include <string>
 
-using namespace CocosDenshion;
-using namespace cocos2d;
 
+using namespace cocos2d;
+using namespace cocos2d::experimental;
+//using namespace CocosDenshion;
 
 
 cocos2d::Scene* GameMenu::createScene()
@@ -17,9 +18,12 @@ cocos2d::Scene* GameMenu::createScene()
 
 void GameMenu::update(float deltaTime)
 {
-	if (!SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying())
+	/*if (!SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying())
 	{
 		SimpleAudioEngine::getInstance()->playBackgroundMusic(MAIN_MUSIC_THEME.c_str(), false);
+	}*/
+	if (AudioEngine::getState(_layerMusicID) != AudioEngine::AudioState::PLAYING) {
+		_layerMusicID = AudioEngine::play2d(MAIN_MUSIC_THEME, true, _core->getMusicVolume());
 	}
 }
 
@@ -82,29 +86,31 @@ bool GameMenu::init()
 	
 		
 	//background->setPosition(this->getBoundingBox().getMidX(), this->getBoundingBox().getMidY());
-
+	
 	auto menu = Menu::create(NewPvPlGame, NewPvPCGame, CustomGame, LoadGame, GameSettings, QuitGame, nullptr);
 		
 	this->addChild(menu);
 
-	// Play BackgroundMusic
-	SimpleAudioEngine::getInstance()->playBackgroundMusic(MAIN_MUSIC_THEME.c_str(), false);
-
 	// Launching update method every frame
 	scheduleUpdate();
+
+	_layerMusicID = AudioEngine::play2d(MAIN_MUSIC_THEME, true, _core->getMusicVolume());
 
 	return true;
 }
 
 void GameMenu::onNewGamePvPlClick(cocos2d::Ref* sender)
 {
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
 	_core->initialSetup();
+	this->pause();
+	AudioEngine::stop(_layerMusicID);
 	Director::getInstance()->pushScene(TransitionCrossFade::create(1.0, NewGameLayer::createScene()));
 }
 
 void GameMenu::onNewGamePvPCClick(cocos2d::Ref* sender)
 {
-	//Director::getInstance()->popToSceneStackLevel(2);
+	
 }
 
 void GameMenu::onCustomGameClick(cocos2d::Ref* sender)
@@ -117,26 +123,26 @@ void GameMenu::onCustomGameClick(cocos2d::Ref* sender)
 
 void GameMenu::onLoadGameClick(cocos2d::Ref* sender)
 {
-	/*auto gameScene = Scene::create();
-	gameScene->addChild(GameLayer::create());
-
-	Director::getInstance()->replaceScene(gameScene);*/
+	this->pause();
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+	AudioEngine::stop(_layerMusicID);
+	Director::getInstance()->pushScene(LoadGameScene::createScene());
 }
 
 void GameMenu::onGameSettingsClick(cocos2d::Ref* sender)
 {
-	/*auto gameScene = Scene::create();
-	gameScene->addChild(GameLayer::create());
-
-	Director::getInstance()->replaceScene(gameScene);*/
+	this->pause();
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+	AudioEngine::stop(_layerMusicID);
+	Director::getInstance()->pushScene(GameSettingsMenu::createScene());
 }
 
 void GameMenu::onQuitGameClick(cocos2d::Ref* sender)
 {
-	/*auto gameScene = Scene::create();
-	gameScene->addChild(GameLayer::create());
-
-	Director::getInstance()->replaceScene(gameScene);*/
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+	_core->clearData();
+	AudioEngine::end();
+	Director::getInstance()->end();
 }
 
 

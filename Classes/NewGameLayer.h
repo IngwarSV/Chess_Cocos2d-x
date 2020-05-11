@@ -3,18 +3,21 @@
 
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
-#include "audio/include/SimpleAudioEngine.h"
+#include "audio/include/AudioEngine.h"
+//#include "audio/include/SimpleAudioEngine.h"
 #include <filesystem>
 
 #include "Core.h"
 #include "MyTests.h"
 #include "SaveGameScene.h"
 #include "LOadGameScene.h"
+#include "GameSettingsMenu.h"
 #include "QuitGameScene.h"
 
 class NewGameLayer : public cocos2d::Layer {
 private:
 	Core* _core = Core::sharedCore();
+	int _layerMusicID = 0;
 	cocos2d::Label* _logMessageLabel;
 	cocos2d::Label* _p1Timer;
 	cocos2d::Label* _p2Timer;

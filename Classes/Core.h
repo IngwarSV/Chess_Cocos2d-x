@@ -3,7 +3,8 @@
 #pragma once
 
 #include "cocos2d.h"
-#include "audio/include/SimpleAudioEngine.h"
+#include "audio/include/AudioEngine.h"
+//#include "audio/include/SimpleAudioEngine.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -16,7 +17,6 @@
 #include "Units.h"
 
 using namespace DEF_SETT;
-
 
 class Core {
 private:
@@ -70,6 +70,10 @@ private:
 
 	Figure* _figureToMove;
 
+	// Music/Sounds stuff
+	float _soundsVolume = 1.0f;
+	float _musicVolume = 1.0f;
+	
 // methods
 	bool init();
 
@@ -151,7 +155,13 @@ public:
 
 	Figure* getFigureOnBoard(Location point) const;
 
+	float getSoundsVolume();
+
+	float getMusicVolume();
+
 	//setters
 	void setLogMessage(std::string logMessage);
+	void setSoundsVolume(float volume);
+	void setMusicVolume(float volume);
 	
 };

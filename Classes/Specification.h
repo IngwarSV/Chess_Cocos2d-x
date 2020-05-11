@@ -75,12 +75,17 @@ namespace DEF_SETT {
 	const int MOVES_SOUND_AMOUNT = 5;
 	const std::string CHESS_CLOCK{ "Sounds/ChessClock.mp3" };
 	const std::string MAIN_MUSIC_THEME{ "Sounds/MenuTheme1.mp3" };
+	const std::string MENU_MUSIC_THEME{ "Sounds/MenuTheme2.mp3" };
+	
 	const std::string GAME_OVER_MUSIC{ "Sounds/GameOver.mp3" };
 	const std::string MOVE_SOUND1{ "Sounds/Move1.mp3" };
 	const std::string MOVE_SOUND2{ "Sounds/Move2.mp3" };
 	const std::string MOVE_SOUND3{ "Sounds/Move3.mp3" };
 	const std::string MOVE_SOUND4{ "Sounds/Move4.mp3" };
 	const std::string MOVE_SOUND5{ "Sounds/Move5.mp3" };
+	const std::string MOVE_SOUND_SAMPLE{ "Sounds/Click.mp3" };
+	const std::string CLICK_SOUND_SAMPLE{ "Sounds/Click.mp3" };
+	const std::string MUSIC_SAMPLE{ "Sounds/MUSIC_SAMPLE.mp3" };
 	const std::string CHECK_SOUND{ "Sounds/Sword1.mp3" };
 	const std::string DRAW_SOUND{ "Sounds/Draw1.mp3" };
 	

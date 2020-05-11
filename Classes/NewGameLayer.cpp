@@ -1,11 +1,12 @@
 #include "NewGameLayer.h"
 
-//#define TESTS 1
+//#define PERFORM_TESTS 1
 
 using namespace cocos2d;
+using namespace cocos2d::experimental;
 namespace fs = std::filesystem;
 using namespace DEF_SETT;
-using namespace CocosDenshion;
+//using namespace CocosDenshion;
 
 cocos2d::Scene* NewGameLayer::createScene() {
 	cocos2d::Scene* scene = cocos2d::Scene::create();
@@ -88,7 +89,7 @@ bool NewGameLayer::init() {
 	_scrollView->addChild(textWidget);
 	this->addChild(_scrollView, 1);
 
-#if TESTS
+#if PERFORM_TESTS     // if PERFORM_TESTS - Loading saved games will just start simple new game
 	//adding testsResults to scrollView
 	MyTests tests;
 	tests.runCoreTests();
@@ -97,6 +98,7 @@ bool NewGameLayer::init() {
 		updateMovesLog(testsResult);
 	}
 	_core->_testsResults.clear();
+	
 #endif
 
 	//updating scrollViewContent in case of loading game
@@ -158,9 +160,12 @@ bool NewGameLayer::init() {
 
 	// Setting SideToMoveIcon
 	setActiveIcon();
-
+	
 	// Play BackgroundMusic
-	SimpleAudioEngine::getInstance()->playBackgroundMusic(CHESS_CLOCK.c_str(), true);
+	/*SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+	SimpleAudioEngine::getInstance()->playBackgroundMusic(CHESS_CLOCK.c_str(), true);*/
+	//AudioEngine::stopAll();
+	_layerMusicID = AudioEngine::play2d(CHESS_CLOCK, true, _core->getSoundsVolume());
 
 	// Starting first turn
 	_core->startTurnDurationCount();
@@ -251,9 +256,15 @@ void NewGameLayer::processEvent(cocos2d::Vec2 location)
 }
 
 void NewGameLayer::update(float deltaTime) {
-	
 	updateTimers();
 	_logMessageLabel->setString(_core->getLogMessage());
+	/*if (!SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying())
+	{
+		SimpleAudioEngine::getInstance()->playBackgroundMusic(CHESS_CLOCK.c_str(), false);
+	}*/
+	if (AudioEngine::getState(_layerMusicID) != AudioEngine::AudioState::PLAYING) {
+		_layerMusicID = AudioEngine::play2d(CHESS_CLOCK, true, _core->getSoundsVolume());
+	}
 }
 
 void NewGameLayer::updateTimers() {
@@ -333,12 +344,14 @@ void NewGameLayer::onMouseDown(Event* event)
 
 void NewGameLayer::onSaveGameClick(cocos2d::Ref* sender)
 {
-	this->pause();
 	if (_core->getGameOver()) {
 		_core->setLogMessage(ErrorSaveGameOverString);
 
 		return;
 	}
+	this->pause();
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+	AudioEngine::stop(_layerMusicID);
 	Director::getInstance()->pushScene(SaveGameScene::createScene());
 }
 
@@ -359,23 +372,25 @@ void NewGameLayer::onLoadGameClick(cocos2d::Ref* sender)
 		return;
 	}
 
-
-
 	this->pause();
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+	AudioEngine::stop(_layerMusicID);
 	Director::getInstance()->pushScene(LoadGameScene::createScene());
 }
 
 void NewGameLayer::onGameSettingsClick(cocos2d::Ref* sender)
 {
-	/*auto gameScene = Scene::create();
-	gameScene->addChild(GameLayer::create());
-
-	Director::getInstance()->replaceScene(gameScene);*/
+	this->pause();
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+	AudioEngine::stop(_layerMusicID);
+	Director::getInstance()->pushScene(GameSettingsMenu::createScene());
 }
 
 void NewGameLayer::onQuitGameClick(cocos2d::Ref* sender)
 {
 	this->pause();
+	AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+	AudioEngine::stop(_layerMusicID);
 	Director::getInstance()->pushScene(QuitGameScene::createScene());
 }
 

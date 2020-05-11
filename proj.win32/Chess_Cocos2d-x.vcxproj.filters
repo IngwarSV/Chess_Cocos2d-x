@@ -54,6 +54,9 @@
     <ClCompile Include="..\Classes\MyTests.cpp">
       <Filter>Cpp</Filter>
     </ClCompile>
+    <ClCompile Include="..\Classes\GameSettingsMenu.cpp">
+      <Filter>Cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -93,6 +96,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\Classes\MyTests.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\GameSettingsMenu.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

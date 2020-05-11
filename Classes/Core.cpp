@@ -2,7 +2,8 @@
 
 using namespace cocos2d;
 using namespace std::chrono;
-using namespace CocosDenshion;
+using namespace cocos2d::experimental;
+//using namespace CocosDenshion;
 
 static bool s_firstRun = true;
 static Core s_sharedCore;
@@ -105,8 +106,9 @@ bool Core::init() {
 
 	spritecache->addSpriteFramesWithFile("Images.plist", "Images.png");
 
-	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(CHESS_CLOCK.c_str());
+	/*SimpleAudioEngine::getInstance()->preloadBackgroundMusic(CHESS_CLOCK.c_str());
 	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(MAIN_MUSIC_THEME.c_str());
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(MENU_MUSIC_THEME.c_str());
 	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(GAME_OVER_MUSIC.c_str());
 	SimpleAudioEngine::getInstance()->preloadEffect(MOVE_SOUND1.c_str());
 	SimpleAudioEngine::getInstance()->preloadEffect(MOVE_SOUND2.c_str());
@@ -116,11 +118,23 @@ bool Core::init() {
 	SimpleAudioEngine::getInstance()->preloadEffect(CHECK_SOUND.c_str());
 	SimpleAudioEngine::getInstance()->preloadEffect(DRAW_SOUND.c_str());
 
-	
-	
-	
-	SimpleAudioEngine::getInstance()->setEffectsVolume(1.0f);
-	SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(1.0f);
+	SimpleAudioEngine::getInstance()->setEffectsVolume(0.8f);
+	SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(0.8f);*/
+
+	AudioEngine::preload(CHESS_CLOCK);
+	AudioEngine::preload(MAIN_MUSIC_THEME);
+	AudioEngine::preload(MENU_MUSIC_THEME);
+	AudioEngine::preload(GAME_OVER_MUSIC);
+	AudioEngine::preload(CLICK_SOUND_SAMPLE);
+	AudioEngine::preload(MOVE_SOUND_SAMPLE);
+	AudioEngine::preload(MUSIC_SAMPLE);
+	AudioEngine::preload(MOVE_SOUND1);
+	AudioEngine::preload(MOVE_SOUND2);
+	AudioEngine::preload(MOVE_SOUND3);
+	AudioEngine::preload(MOVE_SOUND4);
+	AudioEngine::preload(MOVE_SOUND5);
+	AudioEngine::preload(CHECK_SOUND);
+	AudioEngine::preload(DRAW_SOUND);
 
 	return true;
 }
@@ -939,8 +953,8 @@ void Core::clearData()
 
 void Core::makeMove(Figure* figureToMove, Location currentLocation, Location newLocation) {
 	std::string effect = "Sounds/Move" + std::to_string(rand() % MOVES_SOUND_AMOUNT + 1) + ".mp3";
-	SimpleAudioEngine::getInstance()->playEffect(effect.c_str());
-
+	//SimpleAudioEngine::getInstance()->playEffect(effect.c_str());
+	AudioEngine::play2d(effect, false, _soundsVolume);
 	_board[currentLocation.x][currentLocation.y] = nullptr;
 	_board[newLocation.x][newLocation.y] = figureToMove;
 	figureToMove->setLocation(newLocation);
@@ -994,17 +1008,23 @@ bool Core::endTurn(Location currentLocation, Location newLocation)
 		
 		if (isCheckmate()) {
 			_gameOver = true;
-			SimpleAudioEngine::getInstance()->stopBackgroundMusic();
-			SimpleAudioEngine::getInstance()->playBackgroundMusic(GAME_OVER_MUSIC.c_str(), false);
+			/*SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+			SimpleAudioEngine::getInstance()->playBackgroundMusic(GAME_OVER_MUSIC.c_str(), false);*/
+			AudioEngine::stopAll();
+			AudioEngine::play2d(GAME_OVER_MUSIC, false, _musicVolume);
 		}
 		else {
-			SimpleAudioEngine::getInstance()->playEffect(CHECK_SOUND.c_str());
+			//SimpleAudioEngine::getInstance()->playEffect(CHECK_SOUND.c_str());
+			AudioEngine::play2d(CHECK_SOUND, false, _soundsVolume);
 		}
 	}
 	else if (isDraw()) {
 		_gameOver = true;
-		SimpleAudioEngine::getInstance()->stopBackgroundMusic();
-		SimpleAudioEngine::getInstance()->playEffect(DRAW_SOUND.c_str());
+		/*SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+		SimpleAudioEngine::getInstance()->playEffect(DRAW_SOUND.c_str());*/
+		AudioEngine::stopAll();
+		AudioEngine::play2d(DRAW_SOUND, false, _soundsVolume);
+		AudioEngine::play2d(GAME_OVER_MUSIC, false, _musicVolume);
 	}
 
 	return true;
@@ -1180,7 +1200,39 @@ Figure* Core::getFigureOnBoard(Location point) const
 	return _board[point.x][point.y];
 }
 
+float Core::getSoundsVolume()
+{
+	return _soundsVolume;
+}
+
+float Core::getMusicVolume()
+{
+	return _musicVolume;
+}
+
 void Core::setLogMessage(std::string logMessage)
 {
 	_logMessage = logMessage;
+}
+
+void Core::setSoundsVolume(float volume)
+{
+	_soundsVolume = volume;
+	if (_soundsVolume > 1.0f) {
+		_soundsVolume = 1.0f;
+	}
+	if (_soundsVolume < 0.0f) {
+		_soundsVolume = 0.0f;
+	}
+}
+
+void Core::setMusicVolume(float volume)
+{
+	_musicVolume = volume;
+	if (_musicVolume > 1.0f) {
+		_musicVolume = 1.0f;
+	}
+	if (_musicVolume < 0.0f) {
+		_musicVolume = 0.0f;
+	}
 }

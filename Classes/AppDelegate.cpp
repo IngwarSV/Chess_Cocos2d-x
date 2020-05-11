@@ -26,8 +26,8 @@
 #include "Core.h"
 #include "GameMenu.h"
 
-// #define USE_AUDIO_ENGINE 1
-#define USE_SIMPLE_AUDIO_ENGINE 1
+#define USE_AUDIO_ENGINE 1
+//#define USE_SIMPLE_AUDIO_ENGINE 1
 
 #if USE_AUDIO_ENGINE && USE_SIMPLE_AUDIO_ENGINE
 #error "Don't use AudioEngine and SimpleAudioEngine at the same time. Please just select one in your game!"
@@ -138,6 +138,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
 // This function will be called when the app is inactive. Note, when receiving a phone call it is invoked.
 void AppDelegate::applicationDidEnterBackground() {
     Director::getInstance()->stopAnimation();
+    Director::getInstance()->pause();
 
 #if USE_AUDIO_ENGINE
     AudioEngine::pauseAll();
@@ -151,6 +152,7 @@ void AppDelegate::applicationDidEnterBackground() {
 // this function will be called when the app is active again
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();
+    Director::getInstance()->resume();
 
 #if USE_AUDIO_ENGINE
     AudioEngine::resumeAll();

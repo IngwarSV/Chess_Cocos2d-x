@@ -3,7 +3,8 @@
 
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
-#include "audio/include/SimpleAudioEngine.h"
+#include "audio/include/AudioEngine.h"
+//#include "audio/include/SimpleAudioEngine.h"
 #include <filesystem> // creating directory for Saved Games and loading file with saved data
 //#include <fstream>
 //#include <string>
@@ -17,6 +18,7 @@
 class LoadGameScene : public cocos2d::Layer {
 private:
 	Core* _core = Core::sharedCore();
+	int _layerMusicID = 0;
 	cocos2d::ui::TextField* _textField = nullptr;
 
 public:

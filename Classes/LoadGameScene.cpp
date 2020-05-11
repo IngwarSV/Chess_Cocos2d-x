@@ -2,7 +2,8 @@
 
 using namespace cocos2d;
 using namespace ui;
-using namespace CocosDenshion;
+using namespace cocos2d::experimental;
+//using namespace CocosDenshion;
 using namespace DEF_SETT;
 namespace fs = std::filesystem;
 
@@ -22,8 +23,10 @@ bool LoadGameScene::init() {
 
 	auto winSize = Director::getInstance()->getWinSize();
 
-	// pause BackgroundMusic 
-	SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
+	// play BackgroundMusic 
+	/*SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+	SimpleAudioEngine::getInstance()->playBackgroundMusic(MENU_MUSIC_THEME.c_str(), true);*/
+	_layerMusicID = AudioEngine::play2d(MENU_MUSIC_THEME, true, _core->getMusicVolume());
 
 	// Setting background
 	auto background = cocos2d::Sprite::create("BG2HD.png");
@@ -115,6 +118,7 @@ bool LoadGameScene::init() {
 			case ui::Widget::TouchEventType::BEGAN:
 				break;
 			case ui::Widget::TouchEventType::ENDED:
+				AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
 				_textField->setString(dynamic_cast<ui::Button*>(sender)->getTitleText());
 				break;
 			default:
@@ -137,6 +141,7 @@ bool LoadGameScene::init() {
 		case ui::Widget::TouchEventType::BEGAN:
 			break;
 		case ui::Widget::TouchEventType::ENDED:
+			AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
 			if (filename != "") {
 				size_t length = filename.length();
 				if (length > 4) {
@@ -163,13 +168,16 @@ bool LoadGameScene::init() {
 
 					_core->loadData(gameDataString, wArmyDataString, bArmyDataString, filename);
 					load.close();
-
+					// stop BackgroundMusic 
+					AudioEngine::stop(_layerMusicID);
+					//SimpleAudioEngine::getInstance()->stopBackgroundMusic();
 					Director::getInstance()->popToRootScene();
 					Director::getInstance()->pushScene(TransitionCrossFade::create(1.0, NewGameLayer::createScene()));
 				}
 				else {
 					_core->setLogMessage(NoSuchLoadFileString + filename);
-					SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
+					AudioEngine::stop(_layerMusicID);
+					//SimpleAudioEngine::getInstance()->stopBackgroundMusic();
 					_core->startTurnDurationCount();
 					Director::getInstance()->popScene();
 				}
@@ -187,9 +195,19 @@ bool LoadGameScene::init() {
 	buttonQuit->setPosition(Vec2(winSize.width - 50, winSize.height - 50));
 
 	buttonQuit->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
-		SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
-		_core->startTurnDurationCount();
-		Director::getInstance()->popScene();
+		switch (type) {
+		case ui::Widget::TouchEventType::BEGAN:
+			break;
+		case ui::Widget::TouchEventType::ENDED:
+			AudioEngine::stop(_layerMusicID);
+			AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+			//SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+			_core->startTurnDurationCount();
+			Director::getInstance()->popScene();
+			break;
+		default:
+			break;
+		}
 	});
 
 	this->addChild(buttonQuit, 3);

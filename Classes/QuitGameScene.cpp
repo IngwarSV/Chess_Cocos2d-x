@@ -2,7 +2,8 @@
 
 using namespace cocos2d;
 using namespace ui;
-using namespace CocosDenshion;
+using namespace cocos2d::experimental;
+//using namespace CocosDenshion;
 using namespace DEF_SETT;
 
 cocos2d::Scene* QuitGameScene::createScene() {
@@ -22,8 +23,12 @@ bool QuitGameScene::init() {
 
 	auto winSize = Director::getInstance()->getWinSize();
 
-	// pause BackgroundMusic 
-	SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
+	// play BackgroundMusic 
+	/*SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+	SimpleAudioEngine::getInstance()->playBackgroundMusic(MENU_MUSIC_THEME.c_str(), true);*/
+	//AudioEngine::stopAll();
+	_layerMusicID = AudioEngine::play2d(MENU_MUSIC_THEME, true, _core->getMusicVolume());
+
 
 	// Setting background
 	auto background = cocos2d::Sprite::create("BG2HD.png");
@@ -50,13 +55,16 @@ bool QuitGameScene::init() {
 	buttonNO->setPosition(Vec2(winSize.width / 2 + 80, winSize.height / 2 - 30));
 	
 	buttonYES->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
+		AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
 		_core->clearData();
-		SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+		AudioEngine::stop(_layerMusicID);
+
 		Director::getInstance()->popToRootScene();
 	});
 	
 	buttonNO->addTouchEventListener([&](Ref* sender, Widget::TouchEventType type) {
-		SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
+		AudioEngine::play2d(CLICK_SOUND_SAMPLE, false, _core->getSoundsVolume());
+		AudioEngine::stop(_layerMusicID);
 		_core->startTurnDurationCount();
 		Director::getInstance()->popScene();
 	});
